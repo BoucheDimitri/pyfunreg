@@ -13,6 +13,7 @@ class NystromFeatures:
         self.eigvals, self.eigvecs = None, None
         self.inds = None
         self.Xnys = None
+        self.fitted = False
 
     def fit(self, X, K=None):
         if K is None:
@@ -25,6 +26,7 @@ class NystromFeatures:
         u, V = linalg.eigh(Knys)
         thresh_inds = np.argwhere(u > self.thresh).flatten()
         self.eigvals, self.eigvecs = u[thresh_inds], V[:, thresh_inds]
+        self.fit = True
 
     def __call__(self, X, K=None):
         if K is None:
@@ -42,13 +44,15 @@ class RandomFourierFeatures:
         self.input_dim = None
         self.seed = seed
         self.w, self.b = None, None
+        self.fit = False
     
-    def fit(self, X):
+    def fit(self, X, K=None):
         self.input_dim = X.shape[1]
         np.random.seed(self.seed)
         self.w = torch.from_numpy(np.random.normal(0, 1, (self.input_dim, self.n_features)))
         self.b = torch.from_numpy(np.random.uniform(0, 2 * np.pi, (1, self.n_features)))
+        self.fit = True
     
-    def __call__(self, X):
+    def __call__(self, X, K=None):
         return np.sqrt(2 / self.n_features) * torch.cos(np.sqrt(2 * self.gamma) * X @ self.w + self.b)
 

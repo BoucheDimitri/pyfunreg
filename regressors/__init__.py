@@ -1,1 +1,1 @@
-from .kpl import SeparableKPL
+from .kpl import SeparableKPL, FeaturesKPL
