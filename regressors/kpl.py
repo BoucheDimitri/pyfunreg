@@ -101,3 +101,6 @@ class SeparableKPL:
             return (self.phi @ (self.B @ self.alpha @ K)).T + self.Ymean
         else:
             return (self.phi @ self.predict_coefs(X, K)).T
+
+
+

@@ -29,10 +29,10 @@ kerin = GaussianKernel(0.01)
 Ktrain = kerin(Xtrain)
 phi = gpdict.T
 # Normalize atoms
-d = phi.shape[1]
-gram_mat = (1 / d) * phi.T @ phi
+m = len(theta)
+gram_mat = (1 / m) * phi.T @ phi
 phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
-phi_adj_phi = (1 / d) * phi.T @ phi
+phi_adj_phi = (1 / m) * phi.T @ phi
 
 
 scores = []
