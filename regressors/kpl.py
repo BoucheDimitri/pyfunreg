@@ -2,6 +2,8 @@ import numpy as np
 from slycot import sb04qd
 import torch
 
+from optim import acc_proxgd
+
 
 def center(Y, center_out):
     if center_out:
@@ -172,6 +174,102 @@ class FeaturesKPL:
             self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
         alpha = sb04qd(q, d, (Z.T @ Z).numpy() / (self.regu * n), self.phi_adj_phi.numpy(), Z.T.numpy() @ Yproj.T.numpy() / (self.regu * n))
         self.alpha = torch.from_numpy(alpha.T)
+    
+    def predict_coefs(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted coefficients, of shape [n_atoms, n_samples]
+        """
+        Z = self.features(X, K)
+        return self.alpha @ Z.T
+
+    def predict(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted functions, of shape [n_samples, n_locations]
+        """
+        if self.center_out:
+            return (self.phi @ self.predict_coefs(X, K)).T + self.Ymean
+        else:
+            return (self.phi @ self.predict_coefs(X, K)).T
+
+
+
+class FeaturesKPLDictsel: 
+
+    def __init__(self, regu, features, phi, phi_adj_phi=None, center_out=False, refit_features=False):
+
+        super().__init__()
+        self.features = features
+        self.regu = regu
+        self.alpha = None
+        self.phi = phi
+        self.phi_adj_phi = phi_adj_phi
+        self.center_out= center_out
+        self.Ymean = None
+        self.refit_features = refit_features
+        self.n = None
+
+    def forget_phi(self):
+        self.phi = None
+
+    def set_phi(self, phi):
+        self.phi = phi
+    
+    def grad(self, alpha):
+        return (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z)
+    
+    def prox(self, alpha, stepsize):
+        norms = torch.norm(alpha, p=2, dim=1)
+        thresh = torch.maximum(1 - (stepsize * self.regu) / norms, torch.tensor(0)).unsqueeze(1)
+        return alpha * thresh
+    
+    def obj(self, alpha):
+        return (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum()
+
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, d=20, monitor=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+        Y : array_like
+            Output functions, of shape [n_samples, n_locations]
+        """
+        n = len(X)
+        m = Y.shape[1]
+        self.n = n
+        # Center if relevant
+        Ycenter, self.Ymean = center(Y, self.center_out)
+        # Project on output data and memorize needed quantities
+        self.Yproj = (1 / m) * self.phi.T @ Y.T
+        self.Y = Y
+        # Make sure features are fit and memorize needed quantities
+        fit_features(self.features, self.refit_features, X, K)
+        self.Z = self.features(X, K)
+        self.ZTZ = self.Z.T @ self.Z
+        # Make sure we have a Gram matrix and memorize it
+        if self.phi_adj_phi is None:
+            self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
+        if alpha0 is None:
+            alpha0 = torch.zeros((self.phi.shape[1], self.features.n_features))
+        alpha, monitored = acc_proxgd(alpha0, self.prox, self.obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, d=d, monitor=monitor)
+        self.alpha = alpha
+        return monitored
     
     def predict_coefs(self, X, K=None):
         """
