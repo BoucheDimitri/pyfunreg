@@ -32,6 +32,8 @@ def acc_proxgd(alpha0, prox, obj, grad, n_epoch=20000, tol=1e-6, beta=0.8, d=20,
         alpha = prox(alpha_v - step_size * grad_v, step_size)
         if monitor is not None:
             monitored.append(monitor(alpha))
+        if alpha_minus1.norm() < 1e-10:
+            raise ValueError("Norm too small")
         diff = (alpha - alpha_minus1).norm() / alpha_minus1.norm()
         print(diff)
         if diff < tol:

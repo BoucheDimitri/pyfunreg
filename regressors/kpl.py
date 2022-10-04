@@ -231,15 +231,24 @@ class FeaturesKPLDictsel:
         self.phi = phi
     
     def grad(self, alpha):
-        return (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z)
+        val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z)
+        if torch.isinf((val ** 2).sum()):
+            raise ValueError("Gradient with infinite norm")
+        return val
     
     def prox(self, alpha, stepsize):
         norms = torch.norm(alpha, p=2, dim=1)
+        # print(norms)
         thresh = torch.maximum(1 - (stepsize * self.regu) / norms, torch.tensor(0)).unsqueeze(1)
-        return alpha * thresh
+        val = alpha * thresh
+        return val
+
     
     def obj(self, alpha):
-        return (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum()
+        val = (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum()
+        if torch.isinf(val):
+            raise ValueError("Objective is infinite")
+        return val
 
     def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, d=20, monitor=None):
         """
@@ -266,7 +275,7 @@ class FeaturesKPLDictsel:
         if self.phi_adj_phi is None:
             self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
         if alpha0 is None:
-            alpha0 = torch.zeros((self.phi.shape[1], self.features.n_features))
+            alpha0 = torch.normal(0, 1, (self.phi.shape[1], self.features.n_features))
         alpha, monitored = acc_proxgd(alpha0, self.prox, self.obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, d=d, monitor=monitor)
         self.alpha = alpha
         return monitored
