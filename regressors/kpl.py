@@ -3,6 +3,7 @@ from slycot import sb04qd
 import torch
 
 from optim import acc_proxgd
+from optim.proxgd import acc_proxgd_restart
 
 
 def center(Y, center_out):
@@ -242,15 +243,21 @@ class FeaturesKPLDictsel:
         thresh = torch.maximum(1 - (stepsize * self.regu) / norms, torch.tensor(0)).unsqueeze(1)
         val = alpha * thresh
         return val
-
+    
+    # def prox(self, alpha, stepsize):
+    #     return (1 / (1 + self.regu * stepsize)) * alpha
     
     def obj(self, alpha):
         val = (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum()
         if torch.isinf(val):
             raise ValueError("Objective is infinite")
         return val
+    
+    def full_obj(self, alpha):
+        val = self.obj(alpha) + self.regu * torch.sqrt((alpha ** 2).sum(dim=1)).sum()
+        return val
 
-    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, d=20, monitor=None):
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):
         """
         Parameters
         ----------
@@ -276,7 +283,262 @@ class FeaturesKPLDictsel:
             self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
         if alpha0 is None:
             alpha0 = torch.normal(0, 1, (self.phi.shape[1], self.features.n_features))
-        alpha, monitored = acc_proxgd(alpha0, self.prox, self.obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, d=d, monitor=monitor)
+        alpha, monitored = acc_proxgd_restart(
+            alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)
+        self.alpha = alpha
+        return monitored
+    
+    def predict_coefs(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted coefficients, of shape [n_atoms, n_samples]
+        """
+        Z = self.features(X, K)
+        return self.alpha @ Z.T
+
+    def predict(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted functions, of shape [n_samples, n_locations]
+        """
+        if self.center_out:
+            return (self.phi @ self.predict_coefs(X, K)).T + self.Ymean
+        else:
+            return (self.phi @ self.predict_coefs(X, K)).T
+
+
+
+class FeaturesKPLDictselDouble: 
+
+    def __init__(self, regu1, regu2, features, phi, phi_adj_phi=None, center_out=False, refit_features=False):
+
+        super().__init__()
+        self.features = features
+        self.regu1 = regu1
+        self.regu2 = regu2
+        self.alpha = None
+        self.phi = phi
+        self.phi_adj_phi = phi_adj_phi
+        self.center_out= center_out
+        self.Ymean = None
+        self.refit_features = refit_features
+        self.n = None
+
+    def forget_phi(self):
+        self.phi = None
+
+    def set_phi(self, phi):
+        self.phi = phi
+    
+    # def grad(self, alpha):
+    #     val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z) + 2 * self.regu2 * self.phi_adj_phi @ alpha
+    #     if torch.isinf((val ** 2).sum()):
+    #         raise ValueError("Gradient with infinite norm")
+    #     return val
+    
+    # def prox(self, alpha, stepsize):
+    #     norms = torch.norm(alpha, p=2, dim=1)
+    #     # print(norms)
+    #     thresh = torch.maximum(1 - (stepsize * self.regu2) / norms, torch.tensor(0)).unsqueeze(1)
+    #     val = alpha * thresh
+    #     return val
+
+    def grad(self, alpha):
+        val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z) + 2 * self.regu1 * self.phi_adj_phi @ alpha
+        if torch.isinf((val ** 2).sum()):
+            raise ValueError("Gradient with infinite norm")
+        return val
+    
+    def prox(self, alpha, stepsize):
+        norms = torch.norm(alpha, p=2, dim=1)
+        # print(norms)
+        thresh = torch.maximum(1 - (stepsize * self.regu2) / norms, torch.tensor(0)).unsqueeze(1)
+        val = alpha * thresh
+        return val
+    
+    
+    # def prox(self, alpha, stepsize):
+    #     return (1 / (1 + self.regu * stepsize)) * alpha
+    
+    def obj(self, alpha):
+        val = (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum() + self.regu1 * torch.diag(alpha.T @ self.phi_adj_phi @ alpha).sum()
+        if torch.isinf(val):
+            raise ValueError("Objective is infinite")
+        return val
+    
+    def full_obj(self, alpha):
+        val = self.obj(alpha) + self.regu2 * torch.sqrt((alpha ** 2).sum(dim=1)).sum()
+        return val
+
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+        Y : array_like
+            Output functions, of shape [n_samples, n_locations]
+        """
+        n = len(X)
+        m = Y.shape[1]
+        self.n = n
+        # Center if relevant
+        Ycenter, self.Ymean = center(Y, self.center_out)
+        # Project on output data and memorize needed quantities
+        self.Yproj = (1 / m) * self.phi.T @ Y.T
+        self.Y = Y
+        # Make sure features are fit and memorize needed quantities
+        fit_features(self.features, self.refit_features, X, K)
+        self.Z = self.features(X, K)
+        self.ZTZ = self.Z.T @ self.Z
+        # Make sure we have a Gram matrix and memorize it
+        if self.phi_adj_phi is None:
+            self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
+        if alpha0 is None:
+            alpha0 = torch.normal(0, 1, (self.phi.shape[1], self.features.n_features))
+        alpha, monitored = acc_proxgd_restart(
+            alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)
+        self.alpha = alpha
+        return monitored
+    
+    def predict_coefs(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted coefficients, of shape [n_atoms, n_samples]
+        """
+        Z = self.features(X, K)
+        return self.alpha @ Z.T
+
+    def predict(self, X, K=None):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted functions, of shape [n_samples, n_locations]
+        """
+        if self.center_out:
+            return (self.phi @ self.predict_coefs(X, K)).T + self.Ymean
+        else:
+            return (self.phi @ self.predict_coefs(X, K)).T
+
+
+
+class FeaturesKPLWorking: 
+
+    def __init__(self, regu1, regu2, features, phi, phi_adj_phi=None, center_out=False, refit_features=False):
+
+        super().__init__()
+        self.features = features
+        self.regu1 = regu1
+        self.regu2 = regu2
+        self.alpha = None
+        self.phi = phi
+        self.phi_adj_phi = phi_adj_phi
+        self.center_out= center_out
+        self.Ymean = None
+        self.refit_features = refit_features
+        self.n = None
+
+    def forget_phi(self):
+        self.phi = None
+
+    def set_phi(self, phi):
+        self.phi = phi
+    
+    # def grad(self, alpha):
+    #     val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z) + 2 * self.regu2 * self.phi_adj_phi @ alpha
+    #     if torch.isinf((val ** 2).sum()):
+    #         raise ValueError("Gradient with infinite norm")
+    #     return val
+    
+    # def prox(self, alpha, stepsize):
+    #     norms = torch.norm(alpha, p=2, dim=1)
+    #     # print(norms)
+    #     thresh = torch.maximum(1 - (stepsize * self.regu2) / norms, torch.tensor(0)).unsqueeze(1)
+    #     val = alpha * thresh
+    #     return val
+
+    def grad(self, alpha):
+        val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z) + 2 * self.regu1 * self.phi_adj_phi @ alpha
+        if torch.isinf((val ** 2).sum()):
+            raise ValueError("Gradient with infinite norm")
+        return val
+    
+    def prox(self, alpha, stepsize):
+        norms = torch.norm(alpha, p=2, dim=1)
+        # print(norms)
+        thresh = torch.maximum(1 - (stepsize * self.regu2) / norms, torch.tensor(0)).unsqueeze(1)
+        val = alpha * thresh
+        return val
+    
+    
+    # def prox(self, alpha, stepsize):
+    #     return (1 / (1 + self.regu * stepsize)) * alpha
+    
+    def obj(self, alpha):
+        val = (1 / self.n) * (((self.phi @ (alpha @ self.Z.T)).T - self.Y) ** 2).sum() + self.regu1 * torch.diag(alpha.T @ self.phi_adj_phi @ alpha).sum()
+        if torch.isinf(val):
+            raise ValueError("Objective is infinite")
+        return val
+    
+    def full_obj(self, alpha):
+        val = self.obj(alpha) + self.regu2 * torch.sqrt((alpha ** 2).sum(dim=1)).sum()
+        return val
+
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):
+        """
+        Parameters
+        ----------
+        X : array_like
+            Input data, of shape [n_samples, n_features]
+        Y : array_like
+            Output functions, of shape [n_samples, n_locations]
+        """
+        n = len(X)
+        m = Y.shape[1]
+        self.n = n
+        # Center if relevant
+        Ycenter, self.Ymean = center(Y, self.center_out)
+        # Project on output data and memorize needed quantities
+        self.Yproj = (1 / m) * self.phi.T @ Y.T
+        self.Y = Y
+        # Make sure features are fit and memorize needed quantities
+        fit_features(self.features, self.refit_features, X, K)
+        self.Z = self.features(X, K)
+        self.ZTZ = self.Z.T @ self.Z
+        # Make sure we have a Gram matrix and memorize it
+        if self.phi_adj_phi is None:
+            self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
+        if alpha0 is None:
+            alpha0 = torch.normal(0, 1, (self.phi.shape[1], self.features.n_features))
+        alpha, monitored = acc_proxgd_restart(
+            alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)
         self.alpha = alpha
         return monitored
     
