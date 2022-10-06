@@ -1,1 +1,1 @@
-from .kpl import SeparableKPL, FeaturesKPL, FeaturesKPLDictsel, FeaturesKPLDictselDouble
+from .kpl import SeparableKPL, FeaturesKPL, FeaturesKPLDictsel, FeaturesKPLDictselDouble, FeaturesKPLWorking

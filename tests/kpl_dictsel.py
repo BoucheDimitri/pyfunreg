@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from slycot import sb04qd
 from scipy import linalg
+from scipy.interpolate import BSpline
 
 from kernel.features import RandomFourierFeatures
 from regressors.kpl import FeaturesKPLDictselDouble
@@ -34,14 +35,15 @@ Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], see
 
 
 # PARASITE ATOMS
-stds_in = [0.005, 0.005, 0.01, 0.01, 0.2, 0.2, 1.0, 1.0]
-stds_out = [0.005, 0.005, 0.01, 0.01, 0.2, 0.2, 1.0, 1.0]
+stds_in = [0.005, 0.005, 0.005, 0.005]
+stds_out = [0.005, 0.005, 0.005, 0.005]
 scale = 1.5
 n_atoms = len(stds_in)
 gamma_cov = torch.Tensor([stds_in, stds_out]).numpy()
 data_gp = SyntheticGPmixture(n_atoms=n_atoms, gamma_cov=gamma_cov, scale=scale)
 data_gp.drawGP(theta, seed_gp=764)
 parasites = data_gp.GP_output
+
 
 dictpara = torch.cat((parasites, gpdict))
 kerin = GaussianKernel(0.01)
@@ -82,15 +84,16 @@ plt.show()
 # nyskpl = FeaturesKPLDictsel(1e-2, nysfeat, phi, phi_adj_phi)
 # nyskpl.fit(Xtrain, Ytrain, Ktrain, tol=1e-4, acc_temper=20, beta=0.8, stepsize0=0.7)
 nyskpl = FeaturesKPLDictselDouble(0, 1e-6, nysfeat, phi, phi_adj_phi)
-nyskpl.fit(Xtrain, Ytrain, Ktrain, tol=1e-7, acc_temper=20, beta=0.8, stepsize0=0.1, n_epoch=30000)
+nyskpl.fit(Xtrain, Ytrain, Ktrain, tol=1e-7, acc_temper=20, beta=0.8, stepsize0=1, n_epoch=30000)
 
 Ktest = kerin(Xtrain, Xtest)
 preds = nyskpl.predict(Xtest, Ktest)
 pred_coefs = nyskpl.predict_coefs(Xtest, Ktest)
 ((preds - Ytest) ** 2).mean()
 
-plt.plot(preds[0])
-plt.plot(Ytest[0])
+i = 5
+plt.plot(preds[i])
+plt.plot(Ytest[i])
 plt.show()
 
 predcore = (phi[:, 4:] @ pred_coefs[4:, :]).T
