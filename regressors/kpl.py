@@ -521,7 +521,7 @@ class FeaturesKPLWorking:
         val = self.obj(alpha) + self.regu2 * torch.sqrt((alpha ** 2).sum(dim=1)).sum()
         return val
 
-    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1, verbose=False):
         """
         Parameters
         ----------
@@ -561,7 +561,7 @@ class FeaturesKPLWorking:
             # Fit model on working set
             alpha, _ = acc_proxgd_restart(
                 alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, 
-                beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)
+                beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0, verbose=verbose)
             # alpha, _ = acc_proxgd(
             #     alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, 
             #     beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)

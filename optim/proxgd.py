@@ -74,7 +74,7 @@ def acc_proxgd(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-6, beta=
 
 
 def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-6, 
-                       beta=0.8, acc_temper=20, monitor=None, stepsize0=0.1):
+                       beta=0.8, acc_temper=20, monitor=None, stepsize0=0.1, verbose=True):
     alpha_minus1 = alpha0
     alpha_minus2 = alpha0
     step_size = stepsize0
@@ -106,7 +106,8 @@ def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-
         # elif crit == "abs-obj":
         # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
         diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
-        # print(diff)
+        if verbose:
+            print(diff)
         if diff.item() < tol:
             converged = True
             break

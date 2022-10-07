@@ -30,14 +30,11 @@ seeds_coefs_test = np.random.choice(np.arange(100, 100000),10, replace=False)
 theta = torch.linspace(0, 1, 100)
 
 
-# ############################ EXAMPLES WITH OUTLIERS ##############################################
+# Load dataset
 Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
 
-# PARASITE ATOMS
-# Noisy gp
-# stds_out = [0.005, 0.005,  0.01, 0.01, 0.05, 0.05, 0.1, 0.1, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1]
-# stds_out = [0.005, 0.005, 0.005, 0.005, 0.01, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.05, 0.1, 0.1, 0.1, 0.1]
-stds_out = [0.005, 0.005, 0.005, 0.005, 0.01, 0.01, 0.01, 0.01]
+# Parasite atoms
+stds_out = [0.005, 0.005, 0.005, 0.005, 0.0075, 0.0075, 0.0075, 0.0075, 0.01, 0.01, 0.01, 0.01]
 stds_in = stds_out
 scale = 1.5
 n_atoms = len(stds_in)
@@ -45,34 +42,44 @@ gamma_cov = torch.Tensor([stds_in, stds_out]).numpy()
 data_gp = SyntheticGPmixture(n_atoms=n_atoms, gamma_cov=gamma_cov, scale=scale)
 data_gp.drawGP(theta, seed_gp=764)
 parasites_gp = data_gp.GP_output
-
 sp_atoms = []
-knots = [np.array([0, 0.05, 0.1, 0.15, 0.2]) + a for a in np.arange(0, 0.9, 0.1)]
+knots = [np.array([0, 0.05, 0.1, 0.15, 0.2]) + a for a in np.arange(0, 0.95, 0.05)]
 for knot in knots:
     b = BSpline.basis_element(knot, extrapolate=False)
     beval = b(theta.numpy())
     beval[np.isnan(beval)] = 0
     sp_atoms.append(beval)
 parasites_sp = torch.from_numpy(np.array(sp_atoms))
-
 dictpara = torch.cat((parasites_gp, parasites_sp, gpdict))
+
+# Projection operators with normalized atoms
 phi = dictpara.T
-# Normalize atoms
 m = len(theta)
 gram_mat = (1 / m) * phi.T @ phi
 phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
 phi_adj_phi = (1 / m) * phi.T @ phi
 d = phi.shape[1]
 m = len(theta)
+
+# Features
 n_feat = 100
+kerin = GaussianKernel(0.01)
+Ktrain = kerin(Xtrain)
+nysfeat = NystromFeatures(kerin, n_feat, 432)
+nysfeat.fit(Xtrain, Ktrain)
+Ktest = kerin(Xtrain, Xtest)
 
 kerin = GaussianKernel(0.01)
 Ktrain = kerin(Xtrain)
 nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
 
-nyskpl = FeaturesKPLWorking(0, 1e-6, nysfeat, phi, phi_adj_phi)
+nyskpl = FeaturesKPLWorking(0, 6.8e-7, nysfeat, phi, phi_adj_phi)
 nyskpl.fit(Xtrain, Ytrain, Ktrain, tol=1e-6, acc_temper=20, beta=0.8, stepsize0=0.7)
+
+
+nyskpl = FeaturesKPLDictselDouble(0, 1e-6, nysfeat, phi, phi_adj_phi)
+nyskpl.fit(Xtrain, Ytrain, Ktrain, tol=1e-6, acc_temper=20, beta=0.8, stepsize0=0.4)
 
 Ktest = kerin(Xtrain, Xtest)
 preds = nyskpl.predict(Xtest, Ktest)
