@@ -9,6 +9,7 @@ class NystromFeatures:
         self.kernel = kernel
         self.seed = seed
         self.n_features = n_features
+        self.n_features_eff = None
         self.thresh = thresh
         self.eigvals, self.eigvecs = None, None
         self.inds = None
@@ -25,6 +26,7 @@ class NystromFeatures:
         Knys = (K[self.inds][:, self.inds]).numpy()
         u, V = linalg.eigh(Knys)
         thresh_inds = np.argwhere(u > self.thresh).flatten()
+        self.n_features_eff = len(thresh_inds)
         self.eigvals, self.eigvecs = u[thresh_inds], V[:, thresh_inds]
         self.fit = True
 

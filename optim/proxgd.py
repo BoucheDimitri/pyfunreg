@@ -35,11 +35,12 @@ def acc_proxgd(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-6, beta=
         # if alpha_minus1.norm() < 1e-10:
         #     raise ValueError("Norm too small")
         # diff = (alpha - alpha_minus1).norm() / alpha_minus1.norm()
-        diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
-        print(diff)
-        if diff < tol:
-            converged = True
-            break
+        # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
+        # print(diff)
+        # if diff < tol:
+        #     converged = True
+        #     break
+        print(obj_full(alpha).item())
         alpha_minus2 = alpha_minus1.detach().clone()
         alpha_minus1 = alpha.detach().clone()
     return alpha, monitored
@@ -104,8 +105,8 @@ def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-
         # if crit == "pct-abs-obj":
         #     diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
         # elif crit == "abs-obj":
-        # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
-        diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
+        diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
+        # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
         if verbose:
             print(diff)
         if diff.item() < tol:
