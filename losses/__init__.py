@@ -1,1 +1,1 @@
-from .losses import Huber2Loss
+from .losses import Huber2Loss, SquareLoss, HuberInfLoss

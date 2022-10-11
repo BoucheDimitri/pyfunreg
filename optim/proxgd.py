@@ -97,6 +97,7 @@ def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-
             step_size = acc_proxgd_lsearch(
                 prox, obj, step_size, alpha_minus1, grad_v, beta)
             alpha = prox(alpha_minus1 - step_size * grad_v, step_size)
+            print("Stepsize: " + str(step_size))
         else:
             alpha = alpha_tentative
         if monitor is not None:
@@ -105,8 +106,8 @@ def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-
         # if crit == "pct-abs-obj":
         #     diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
         # elif crit == "abs-obj":
-        diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
-        # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
+        # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
+        diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
         if verbose:
             print(diff)
         if diff.item() < tol:
