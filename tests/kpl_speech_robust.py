@@ -8,7 +8,8 @@ from scipy import linalg
 from kernel import NystromFeatures, SpeechKernel
 from losses import Huber2Loss, SquareLoss, HuberInfLoss
 from regressors import FeaturesKPLOtherLoss, FeaturesKPL, SeparableKPL
-from optim import acc_proxgd
+from optim import acc_proxgd, AccProxGD
+import time
 
 fontsize = 30
 pad = 20
@@ -57,16 +58,33 @@ nysfeat.fit(Xtrain, Ktrain)
 Z = nysfeat(Xtrain, Ktrain)
 n_feat = Z.shape[1]
 
+accproxgd = AccProxGD(n_epoch=20000, stepsize0=1e3, tol=1e-5, acc_temper=20)
+
 # hloss = Huber2Loss(40)
 # hloss = Huber2Loss(0.005)
 hloss = HuberInfLoss(0.005)
-nyskpl = FeaturesKPLOtherLoss(1e-9, hloss, nysfeat, phi)
-monitor = nyskpl.fit(Xtrain, ytrain, Ktrain, stepsize0=1e3, monitor=nyskpl.obj, tol=1e-5)
+nyskpl = FeaturesKPLOtherLoss(1e-9, hloss, nysfeat, phi, accproxgd, sylvester_init=True)
+monitor = nyskpl.fit(Xtrain, ytrain, Ktrain)
 
-preds = nyskpl.predict(Xtest, Ktest)
+nyskplinit = FeaturesKPL(0.5e-9, nysfeat, phi)
+nyskplinit.fit(Xtrain, ytrain, Ktrain)
+
+start = time.process_time()
+hloss = HuberInfLoss(0.003)
+nyskpl2 = FeaturesKPLOtherLoss(1e-9, hloss, nysfeat, phi, accproxgd)
+monitor = nyskpl2.fit(Xtrain, ytrain, Ktrain)
+end = time.process_time()
+
+
+
+
+
+nyskplinit = FeaturesKPL(1e-9)
+
+preds = nyskpl2.predict(Xtest, Ktest)
 compute_scores(preds, Ytest).item()
 
-i=4
+i=0
 plt.plot(Ytest[0][i], preds[i, :len(Ytest[0][i])])
 plt.plot(Ytest[0][i], Ytest[1][i])
 plt.show()

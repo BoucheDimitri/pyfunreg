@@ -74,6 +74,66 @@ def acc_proxgd(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-6, beta=
 
 
 
+class AccProxGD:
+
+    def __init__(self, n_epoch=20000, tol=1e-5, beta=0.8, acc_temper=20, monitor="obj", stepsize0=0.1, verbose=True):
+        self.n_epoch = n_epoch
+        self.tol = tol
+        self.beta = beta
+        self.acc_temper = acc_temper
+        self.monitor = monitor
+        self.stepsize0 = stepsize0
+        self.verbose = verbose
+    
+    def __call__(self, alpha0, prox, obj, obj_full, grad):
+            alpha_minus1 = alpha0
+            alpha_minus2 = alpha0
+            step_size = self.stepsize0
+            epoch_restart = 0
+            converged = False
+            monitored = []
+            for epoch in range(0, self.n_epoch):
+                acc_cste = epoch_restart / (epoch_restart + 1 + self.acc_temper)
+                alpha_v = alpha_minus1 + acc_cste * (alpha_minus1 - alpha_minus2)
+                grad_v = grad(alpha_v)
+                step_size = acc_proxgd_lsearch(
+                    prox, obj, step_size, alpha_v, grad_v, self.beta)
+                alpha_tentative = prox(
+                    alpha_v - step_size * grad_v, step_size)
+                if ((alpha_v - alpha_tentative) * (alpha_tentative - alpha_minus1)).sum() > 0:
+                    print("RESTART")
+                    epoch_restart = 0
+                    grad_v = grad(alpha_minus1)
+                    step_size = acc_proxgd_lsearch(
+                        prox, obj, step_size, alpha_minus1, grad_v, self.beta)
+                    alpha = prox(alpha_minus1 - step_size * grad_v, step_size)
+                    print("Stepsize: " + str(step_size))
+                else:
+                    alpha = alpha_tentative
+                if self.monitor == "obj":
+                    monitored.append(obj(alpha))
+                elif self.monitor == "obj_full":
+                    monitored.append(obj_full(alpha))
+                # diff = (alpha - alpha_minus1).norm() / alpha_minus1.norm()
+                # if crit == "pct-abs-obj":
+                #     diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
+                # elif crit == "abs-obj":
+                # diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs()
+                diff = (obj_full(alpha) - obj_full(alpha_minus1)).abs() / obj_full(alpha_minus1).abs()
+                if self.verbose:
+                    print(diff)
+                if diff.item() < self.tol:
+                    converged = True
+                    break
+                alpha_minus2 = alpha_minus1.detach().clone()
+                alpha_minus1 = alpha.detach().clone()
+                epoch_restart += 1
+            return alpha, monitored
+            # if not converged:
+            #     raise ConvergenceWarning("Maximum number of iteration reached")
+
+
+
 def acc_proxgd_restart(alpha0, prox, obj, obj_full, grad, n_epoch=20000, tol=1e-6, 
                        beta=0.8, acc_temper=20, monitor=None, stepsize0=0.1, verbose=True):
     alpha_minus1 = alpha0

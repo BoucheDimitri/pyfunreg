@@ -585,7 +585,7 @@ class FeaturesKPLWorking:
 
 class FeaturesKPLOtherLoss:
 
-    def __init__(self, regu, loss, features, phi, center_out=False, refit_features=False):
+    def __init__(self, regu, loss, features, phi, optimizer, center_out=False, refit_features=False, sylvester_init=True):
         self.features = features
         self.regu = regu
         self.alpha = None
@@ -595,6 +595,8 @@ class FeaturesKPLOtherLoss:
         self.refit_features = refit_features
         self.n = None
         self.loss = loss
+        self.optimizer = optimizer
+        self.sylvester_init = sylvester_init
 
     def forget_phi(self):
         self.phi = None
@@ -615,7 +617,7 @@ class FeaturesKPLOtherLoss:
     def prox(self, alpha, gamma):
         return alpha
     
-    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):      
+    def fit(self, X, Y, K=None, alpha0=None):
         n = len(X)
         m = Y.shape[1]
         self.n = n
@@ -625,10 +627,16 @@ class FeaturesKPLOtherLoss:
         # Make sure features are fit and memorize needed quantities
         fit_features(self.features, self.refit_features, X, K)
         self.Z = self.features(X, K)
+        if self.sylvester_init:
+            phi_adj_phi = (1 / m) * self.phi.T @ self.phi
+            d = len(phi_adj_phi)
+            q = self.Z.shape[1]
+            Yproj = (1 / m) * self.phi.T @ Ycenter.T
+            alpha0 = sb04qd(q, d, (self.Z.T @ self.Z).numpy() / (self.regu * n), phi_adj_phi.numpy(), self.Z.T.numpy() @ Yproj.T.numpy() / (self.regu * n))
+            alpha0 = torch.from_numpy(alpha0.T)
         if alpha0 is None:
             alpha0 = torch.normal(0, 1, (self.phi.shape[1], self.features.n_features_eff))
-        alpha, monitored = acc_proxgd_restart(
-            alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol, beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0, verbose=True)
+        alpha, monitored = self.optimizer(alpha0, self.prox, self.obj, self.full_obj, self.grad)
         self.alpha = alpha
         return monitored
     
