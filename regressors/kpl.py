@@ -16,7 +16,7 @@ def center(Y, center_out):
 
 
 def fit_features(features, refit_features, X, K):
-    if not features.fit:
+    if not features.fitted:
         features.fit(X, K)
     else:
         if refit_features:
@@ -627,9 +627,9 @@ class FeaturesKPLOtherLoss:
         # Make sure features are fit and memorize needed quantities
         fit_features(self.features, self.refit_features, X, K)
         self.Z = self.features(X, K)
-        if self.sylvester_init:
+        if self.sylvester_init and alpha0 is None:
             phi_adj_phi = (1 / m) * self.phi.T @ self.phi
-            d = len(phi_adj_phi)
+            d = self.phi.shape[1]
             q = self.Z.shape[1]
             Yproj = (1 / m) * self.phi.T @ Ycenter.T
             alpha0 = sb04qd(q, d, (self.Z.T @ self.Z).numpy() / (self.regu * n), phi_adj_phi.numpy(), self.Z.T.numpy() @ Yproj.T.numpy() / (self.regu * n))

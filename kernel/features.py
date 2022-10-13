@@ -21,6 +21,8 @@ class NystromFeatures:
             K = self.kernel(X, X)
         n = len(X)
         np.random.seed(self.seed)
+        if self.n_features > n:
+            self.n_features = n
         self.inds = np.random.choice(np.arange(0, n), self.n_features, replace=False)
         self.Xnys = X[self.inds]
         Knys = (K[self.inds][:, self.inds]).numpy()
@@ -28,7 +30,7 @@ class NystromFeatures:
         thresh_inds = np.argwhere(u > self.thresh).flatten()
         self.n_features_eff = len(thresh_inds)
         self.eigvals, self.eigvecs = u[thresh_inds], V[:, thresh_inds]
-        self.fit = True
+        self.fitted = True
 
     def __call__(self, X, K=None):
         if K is None:

@@ -2,10 +2,10 @@ from collections.abc import Iterable
 from itertools import product
 
 
-def product_config(config):
+def product_config(config, leave_out=[]):
     keys_multi = []
     for key in config.keys():
-        if isinstance(config[key], Iterable):
+        if isinstance(config[key], Iterable) and not key in leave_out:
             keys_multi.append(key)
     configs = []
     for tup in product(*[config[key] for key in keys_multi]):
