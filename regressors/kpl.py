@@ -149,8 +149,11 @@ class FeaturesKPL:
 
     def set_phi(self, phi):
         self.phi = phi
+    
+    def set_features(self, features):
+        self.features = features
 
-    def fit(self, X, Y, K=None):
+    def fit(self, X, Y, K=None, refit_features=False):
         """
         Parameters
         ----------
@@ -167,7 +170,7 @@ class FeaturesKPL:
         # Project on output data
         Yproj = (1 / m) * self.phi.T @ Ycenter.T
         # Make sure features are fit
-        fit_features(self.features, self.refit_features, X, K)
+        fit_features(self.features, self.refit_features or refit_features, X, K)
         Z = self.features(X, K)
         q = Z.shape[1]
         # Make sure we have a Gram matrix
@@ -342,6 +345,9 @@ class FeaturesKPLDictsel:
     def set_phi(self, phi):
         self.phi = phi
     
+    def set_features(self, features):
+        self.features = features
+    
     def grad(self, alpha):
         val = (2 / self.n) * (self.phi_adj_phi @ alpha @ self.ZTZ - self.Yproj @ self.Z) + 2 * self.regu * self.phi_adj_phi @ alpha
         if torch.isinf((val ** 2).sum()):
@@ -364,7 +370,7 @@ class FeaturesKPLDictsel:
         val = self.obj(alpha) + self.regu_dictsel * torch.sqrt((alpha ** 2).sum(dim=1)).sum()
         return val
 
-    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1):
+    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1, refit_features=False):
         """
         Parameters
         ----------
@@ -382,7 +388,7 @@ class FeaturesKPLDictsel:
         self.Yproj = (1 / m) * self.phi.T @ Y.T
         self.Y = Y
         # Make sure features are fit and memorize needed quantities
-        fit_features(self.features, self.refit_features, X, K)
+        fit_features(self.features, self.refit_features or refit_features, X, K)
         self.Z = self.features(X, K)
         self.ZTZ = self.Z.T @ self.Z
         # Make sure we have a Gram matrix and memorize it
@@ -603,6 +609,12 @@ class FeaturesKPLOtherLoss:
 
     def set_phi(self, phi):
         self.phi = phi
+    
+    def set_features(self, features):
+        self.features = features
+    
+    def set_loss(self, loss):
+        self.loss = loss
 
     def grad(self, alpha):
         G = self.loss.grad(self.Z @ alpha.T @ self.phi.T - self.Y) @ (self.phi / self.phi.shape[0])
@@ -617,7 +629,7 @@ class FeaturesKPLOtherLoss:
     def prox(self, alpha, gamma):
         return alpha
     
-    def fit(self, X, Y, K=None, alpha0=None):
+    def fit(self, X, Y, K=None, alpha0=None, refit_features=False):
         n = len(X)
         m = Y.shape[1]
         self.n = n
@@ -625,7 +637,7 @@ class FeaturesKPLOtherLoss:
         Ycenter, self.Ymean = center(Y, self.center_out)
         self.Y = Y
         # Make sure features are fit and memorize needed quantities
-        fit_features(self.features, self.refit_features, X, K)
+        fit_features(self.features, self.refit_features or refit_features, X, K)
         self.Z = self.features(X, K)
         if self.sylvester_init and alpha0 is None:
             phi_adj_phi = (1 / m) * self.phi.T @ self.phi
