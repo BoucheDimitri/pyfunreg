@@ -49,10 +49,10 @@ def load_speech_dataset(seed, path, n_train=300):
     return Xtrain, Ytrain_full_ext, Ytrain_full, Xtest, Ytest_full_ext, Ytest_full
 
 
-def pretrain_nystrom_features(X, n_feat, kernel, gammas, cv_seed, n_splits=5):
+def pretrain_nystrom_features(X, n_feat, kernel, gammas, cv_seed, nys_seed, n_splits=5):
     cv = KFold(n_splits=n_splits, shuffle=True, random_state=cv_seed)
     kernels = [kernel(gamma=gamma) for gamma in gammas]
-    feats = [[NystromFeatures(ker, n_feat, 432, thresh=0) for s in range(n_splits)] for ker in kernels]
+    feats = [[NystromFeatures(ker, n_feat, nys_seed, thresh=0) for s in range(n_splits)] for ker in kernels]
     Ks = []
     for l in range(len(kernels)):
         K = kernels[l](X)

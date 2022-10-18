@@ -1,0 +1,6 @@
+*.pyc
+*.gz
+*.txt
+*.ods
+outputs_cluster/
+tsi_cluster/
