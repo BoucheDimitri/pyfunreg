@@ -2,9 +2,7 @@ import os
 import sys
 from sklearn.decomposition import DictionaryLearning
 import torch
-import matplotlib.pyplot as plt
 import numpy as np
-from scipy import linalg
 from sklearn.model_selection import KFold
 import pathlib
 
