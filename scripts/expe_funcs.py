@@ -67,7 +67,7 @@ def pretrain_nystrom_features(X, n_feat, kernel, gammas, cv_seed, nys_seed, n_sp
 def pretrain_dictionaries(Y, cv_seed, n_splits=5, n_components=30, alpha=1e-6, tol=1e-5, max_iter=1000, dl_seed=674):
     phis = []
     cv = KFold(n_splits=n_splits, shuffle=True, random_state=cv_seed)
-    for train_index, test_index in cv.split(X):
+    for train_index, test_index in cv.split(Y):
         dict_learn = DictionaryLearning(n_components=n_components, alpha=alpha, tol=tol, max_iter=max_iter, fit_algorithm="cd", random_state=dl_seed)
         dict_learn.fit(Y[train_index].numpy())
         phi = torch.from_numpy(dict_learn.components_.T)
