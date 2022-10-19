@@ -10,17 +10,6 @@ from multiprocessing import cpu_count
 torch.set_default_dtype(torch.float64)
 
 
-def create_folder(folder):
-    folder_split = str(folder).split("/")
-    path = ""
-    for fold in folder_split:
-        path += "/" + fold
-        try:
-            os.mkdir(path)
-        except FileExistsError:
-            pass
-
-
 def compute_mse(preds_full, Ypartial):
     sc = 0
     for i in range(len(preds_full)):
@@ -58,18 +47,20 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
         esti.alpha = None
         count += 1
     if reduce_stat == "mean":
-        return torch.tensor(mses).mean(dim=0)
+        return torch.tensor(mses).mean(dim=0).clone().detach()
     else:
-        return torch.tensor(mses).quantile(0.5, dim=0)
+        return torch.tensor(mses).quantile(0.5, dim=0).clone().detach()
 
 
-def cv_features(esti, features, X, Y, Ks=None, Yeval=None, n_splits=5, reduce_stat="median", random_state=342):
+def cv_features(esti, features, X, Y, Ks=None, Yeval=None, phis=None, n_splits=5, reduce_stat="median", random_state=342):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     mses = torch.zeros((5, len(features)))
     count = 0
     for train_index, test_index in kf.split(X):
         Xtrain, Xtest = X[train_index], X[test_index]
         Ytrain, Ytest = Y[train_index], Y[test_index]
+        if phis is not None:
+            esti.set_phi(phis[count])
         for l, feats in enumerate(features):
             if Ks is not None:
                 Ktrain = Ks[l][train_index, :][:, train_index]
@@ -84,12 +75,13 @@ def cv_features(esti, features, X, Y, Ks=None, Yeval=None, n_splits=5, reduce_st
                 mses[count, l] = compute_mse(preds, [Yeval[j] for j in test_index])
             else:
                 mses[count, l] = compute_mse(preds, Ytest)
-        print(count)
+        # print(count)
         count += 1
     if reduce_stat == "mean":
-        return torch.tensor(mses).mean(dim=0)
+        return torch.tensor(mses).mean(dim=0).clone().detach()
     else:
-        return torch.tensor(mses).quantile(0.5, dim=0)
+        return torch.tensor(mses).quantile(0.5, dim=0).clone().detach()
+
 
 def tune_consecutive(estis, losses, X, Y, K=None, 
                      Yeval=None, n_splits=5, reduce_stat="median", 
@@ -109,11 +101,11 @@ def tune_consecutive(estis, losses, X, Y, K=None,
 
 
 def tune_features(estis, features, X, Y, Ks=None, 
-                  Yeval=None, n_splits=5, reduce_stat="median", 
+                  Yeval=None, phis=None, phi_test=None, n_splits=5, reduce_stat="median", 
                   random_state=342, n_jobs=-1):
     with parallel_backend("loky"):
         mses = Parallel(n_jobs=n_jobs)(
-            delayed(cv_features)(esti, features, X, Y, Ks, Yeval, n_splits, reduce_stat, random_state) 
+            delayed(cv_features)(esti, features, X, Y, Ks, Yeval, phis, n_splits, reduce_stat, random_state) 
             for esti in estis)
     # for esti in estis:
     #     mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state)]
@@ -121,5 +113,12 @@ def tune_features(estis, features, X, Y, Ks=None,
     esti_argmin, feats_argmin = mses.argmin() // len(features), mses.argmin() % len(features)
     best_esti = estis[esti_argmin]
     best_esti.set_features(features[feats_argmin][0])
+    if phi_test is not None:
+        best_esti.set_phi(phi_test)
     best_esti.fit(X, Y, Ks[feats_argmin], refit_features=True)
     return best_esti, mses
+
+
+def test_esti_partial(esti, X, Ypartial):
+    preds = esti.predict(X)
+    return compute_mse(preds, Ypartial)

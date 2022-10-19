@@ -2,5 +2,6 @@
 *.gz
 *.txt
 *.ods
+*.pkl
 outputs_cluster/
 tsi_cluster/

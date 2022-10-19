@@ -31,6 +31,19 @@ sys.path.append(os.getcwd())
 from datasets import load_raw_speech, process_speech
 
 
+
+def create_folder(folder):
+    folder_split = str(folder).split("/")
+    path = ""
+    for fold in folder_split:
+        path += "/" + fold
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
+
+
+
 def draw_seeds(n_averaging, seed):
     np.random.seed(seed)
     seeds_coefs_train = np.random.choice(np.arange(100, 100000), n_averaging, replace=False)
@@ -72,7 +85,10 @@ def pretrain_dictionaries(Y, cv_seed, n_splits=5, n_components=30, alpha=1e-6, t
         dict_learn.fit(Y[train_index].numpy())
         phi = torch.from_numpy(dict_learn.components_.T)
         phis.append(phi)
-    return phis
+    dict_learn = DictionaryLearning(n_components=n_components, alpha=alpha, tol=tol, max_iter=max_iter, fit_algorithm="cd", random_state=dl_seed)
+    dict_learn.fit(Y.numpy())
+    phi_test = torch.from_numpy(dict_learn.components_.T)
+    return phis, phi_test
 
 # seed = 1454
 # n_train = 300

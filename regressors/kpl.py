@@ -149,6 +149,7 @@ class FeaturesKPL:
 
     def set_phi(self, phi):
         self.phi = phi
+        self.phi_adj_phi = (1 / self.phi.shape[0]) * self.phi.T @ self.phi
     
     def set_features(self, features):
         self.features = features
@@ -456,6 +457,7 @@ class FeaturesKPLWorking:
 
     def set_phi(self, phi):
         self.phi = phi
+        self.phi_adj_phi = (1 / self.phi.shape[0]) * self.phi.T @ self.phi
 
     def grad(self, alpha, working=True):
         if working:
@@ -609,6 +611,7 @@ class FeaturesKPLOtherLoss:
 
     def set_phi(self, phi):
         self.phi = phi
+        self.phi_adj_phi = (1 / self.phi.shape[0]) * self.phi.T @ self.phi
     
     def set_features(self, features):
         self.features = features

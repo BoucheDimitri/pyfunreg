@@ -12,7 +12,8 @@ sys.path.append(str(exec_path))
 import global_config as config
 import expe_funcs
 
-n_averaging = 10
+# n_averaging = 10
+n_averaging = 2
 
 if __name__ == "__main__":
     stacked_dicts = [dict() for i in range(n_averaging)]
