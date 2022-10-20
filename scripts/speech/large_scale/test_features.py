@@ -14,10 +14,10 @@ import expe_funcs
 from model_selection import tune_features, product_config, test_esti_partial
 from regressors import FeaturesKPL
 
-# n_averaging = 10
-# n_feats = [10, 25, 50, 75, 100, 150, 200, 250, 300]
-n_averaging = 2
-n_feats = [10, 25, 50]
+n_averaging = 10
+n_feats = [10, 25, 50, 75, 100, 150, 200, 250, 300]
+lbda_search = torch.logspace(-10, -5, 20)
+
 
 if __name__ == "__main__":
     results_dict = {key: torch.zeros((n_averaging, len(n_feats))) for key in config.KEYS}
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         base_path = str(exec_path.parent.parent.parent)
         out_folder = base_path + "/outputs/results/large_scale_speech/"
         expe_funcs.create_folder(out_folder)
-        conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
+        conf = {"regu": lbda_search, "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
         # conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
         confs = product_config(conf, leave_out=["phi"])
         estis = [FeaturesKPL(**params) for params in confs]

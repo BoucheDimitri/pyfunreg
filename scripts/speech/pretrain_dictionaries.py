@@ -13,10 +13,11 @@ import global_config as config
 import expe_funcs
 
 # n_averaging = 10
-n_averaging = 2
+n_averaging = 10
 
 if __name__ == "__main__":
     stacked_dicts = [dict() for i in range(n_averaging)]
+    stacked_dicts_test = [dict() for i in range(n_averaging)]
     seeds_data, seeds_dict, _, seeds_cv = expe_funcs.draw_seeds(
         n_averaging, config.SEED)
     for i in range(n_averaging):
