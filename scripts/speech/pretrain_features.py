@@ -33,7 +33,7 @@ if __name__ == "__main__":
             # Ks, feats = expe_funcs.pretrain_nystrom_features(Xtrain, n_feat, SpeechKernel, torch.logspace(
             #     *config.KERNEL_INPUT_GAMMA), seeds_cv[i], seeds_nys[i], n_splits=config.CV_SPLIT)
             Ks, feats = expe_funcs.pretrain_nystrom_features(
-                Xtrain, n_feat, SpeechKernel, torch.logspace *(config.KERNEL_INPUT_GAMMA), seeds_cv[i], seeds_nys[i], n_splits=config.CV_SPLIT)
+                Xtrain, n_feat, SpeechKernel, torch.logspace(*config.KERNEL_INPUT_GAMMA), seeds_cv[i], seeds_nys[i], n_splits=config.CV_SPLIT)
             stacked_features[i][n_feat] = (Ks, feats)
             print(n_feat)
     with open(base_path + "/outputs/pretraining/features_speech.pkl", "wb") as outp:
