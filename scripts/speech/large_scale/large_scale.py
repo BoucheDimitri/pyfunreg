@@ -32,8 +32,6 @@ if __name__ == "__main__":
         estis = [FeaturesKPL(**params) for params in confs]
         with open(base_path + "/outputs/pretraining/dicts_speech.pkl", "rb") as inp:
             stacked_dicts = pickle.load(inp)
-        with open(base_path + "/outputs/pretraining/features_speech.pkl", "rb") as inp:
-            stacked_features = pickle.load(inp)
         seeds_data, seeds_dict, _, seeds_cv = expe_funcs.draw_seeds(
             n_averaging, config.SEED)
         for i in range(n_averaging):
@@ -43,7 +41,8 @@ if __name__ == "__main__":
             Xtest = torch.Tensor(Xtest)
             ytrain = torch.Tensor(Ytrain_full_ext[key][1])
             for l, n_feat in enumerate(n_feats):
-                Ks, feats =  stacked_features[i][n_feat]
+                with open(base_path + "/outputs/pretraining/feats_speech_" + str(i) + "_" + str(n_feat) + ".pkl", "rb") as inp:
+                    Ks, feats = pickle.load(inp)
                 best_esti, mses = tune_features(estis, feats, Xtrain, ytrain, Ks=Ks, 
                     Yeval=Ytrain_full[key][1], phis=stacked_dicts[i][key][0], phi_test=stacked_dicts[i][key][1], n_splits=5, reduce_stat="mean", 
                     random_state=seeds_cv[i], n_jobs=-1)

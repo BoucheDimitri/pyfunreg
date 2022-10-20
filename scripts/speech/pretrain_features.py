@@ -19,7 +19,6 @@ n_feats = [10, 25, 50, 75, 100, 150, 200, 250, 300]
 # n_feats = [10, 25, 50]
 
 if __name__ == "__main__":
-    stacked_features = [dict() for i in range(n_averaging)]
     seeds_data, seeds_nys, _, seeds_cv = expe_funcs.draw_seeds(
         n_averaging, config.SEED)
     base_path = str(exec_path.parent.parent)
@@ -34,7 +33,6 @@ if __name__ == "__main__":
             #     *config.KERNEL_INPUT_GAMMA), seeds_cv[i], seeds_nys[i], n_splits=config.CV_SPLIT)
             Ks, feats = expe_funcs.pretrain_nystrom_features(
                 Xtrain, n_feat, SpeechKernel, torch.logspace(*config.KERNEL_INPUT_GAMMA), seeds_cv[i], seeds_nys[i], n_splits=config.CV_SPLIT)
-            stacked_features[i][n_feat] = (Ks, feats)
+            with open(base_path + "/outputs/pretraining/feats_speech_" + str(i) + "_" + str(n_feat) + ".pkl", "wb") as outp:
+                pickle.dump((Ks, feats), outp)
             print(n_feat)
-    with open(base_path + "/outputs/pretraining/features_speech.pkl", "wb") as outp:
-        pickle.dump(stacked_features, outp)
