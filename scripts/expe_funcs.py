@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from sklearn.model_selection import KFold
 import pathlib
+from collections.abc import Iterable
 
 
 
@@ -42,6 +43,20 @@ def create_folder(folder):
         except FileExistsError:
             pass
 
+
+def interpret_corrupt_params(corrupt_params, mode="linspace"):
+    for key in corrupt_params.keys():
+        if isinstance(corrupt_params[key], Iterable):
+            if mode == "linspace":
+                params_iter = torch.linspace(*corrupt_params[key])
+            else:
+                params_iter = corrupt_params[key]
+            params_dicts = [{key: param} for param in params_iter]
+    for key in corrupt_params.keys():
+        if not isinstance(corrupt_params[key], Iterable):
+            for dic in params_dicts:
+                dic[key] = corrupt_params[key]
+    return params_dicts
 
 
 def draw_seeds(n_averaging, seed):
