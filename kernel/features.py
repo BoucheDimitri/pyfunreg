@@ -15,6 +15,7 @@ class NystromFeatures:
         self.inds = None
         self.Xnys = None
         self.fitted = False
+        self.backend = "torch"
 
     def fit(self, X, K=None):
         if K is None:
@@ -25,7 +26,9 @@ class NystromFeatures:
             self.n_features = n
         self.inds = np.random.choice(np.arange(0, n), self.n_features, replace=False)
         self.Xnys = X[self.inds]
-        Knys = (K[self.inds][:, self.inds]).numpy()
+        Knys = K[self.inds][:, self.inds]
+        if isinstance(K, torch.Tensor):
+            Knys = Knys.numpy()
         u, V = linalg.eigh(Knys)
         thresh_inds = np.argwhere(u > self.thresh).flatten()
         self.n_features_eff = len(thresh_inds)
@@ -33,11 +36,18 @@ class NystromFeatures:
         self.fitted = True
 
     def __call__(self, X, K=None):
-        if K is None:
-            Ksub = self.kernel(self.Xnys, X).numpy()
+        if isinstance(X, torch.Tensor):
+            if K is None:
+                Ksub = self.kernel(self.Xnys, X).numpy()
+            else:
+                Ksub = K[self.inds].numpy()
+            return torch.from_numpy(((np.diag(1 / np.sqrt(self.eigvals)) @ self.eigvecs.T) @ Ksub).T)
         else:
-            Ksub = K[self.inds].numpy()
-        return torch.from_numpy(((np.diag(1 / np.sqrt(self.eigvals)) @ self.eigvecs.T) @ Ksub).T)
+            if K is None:
+                Ksub = self.kernel(self.Xnys, X)
+            else:
+                Ksub = K[self.inds]
+            return ((np.diag(1 / np.sqrt(self.eigvals)) @ self.eigvecs.T) @ Ksub).T
 
 
 class RandomFourierFeatures:

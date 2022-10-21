@@ -1,4 +1,5 @@
 from abc import ABC
+from turtle import back
 import numpy as np
 import time
 import torch
@@ -9,13 +10,17 @@ def check_inputs(X, Y=None):
         Xin = torch.from_numpy(X)
         if Y is not None:
             Yin = torch.from_numpy(Y)
+        else:
+            Yin = Xin.detach().clone()
+        backend = "np"
     else:
         Xin = X
-    if Y is None:
-        Yin = Xin.detach().clone()
-    else:
-        Yin = Y
-    return Xin, Yin
+        backend = "torch"
+        if Y is None:
+            Yin = Xin.detach().clone()
+        else:
+            Yin = Y
+    return Xin, Yin, backend
 
 
 class GaussianKernel:
@@ -24,9 +29,12 @@ class GaussianKernel:
         self.gamma = gamma
 
     def __call__(self, X, Y=None):
-        Xin, Yin = check_inputs(X, Y)
+        Xin, Yin, backend = check_inputs(X, Y)
         dists = torch.cdist(Xin, Yin)
-        return torch.exp(- self.gamma * dists ** 2)
+        if backend == "torch":
+            return torch.exp(- self.gamma * dists ** 2)
+        elif backend == "np":
+            return (torch.exp(- self.gamma * dists ** 2)).numpy()
 
 
 class LaplaceKernel:
@@ -35,9 +43,12 @@ class LaplaceKernel:
         self.gamma = gamma
 
     def __call__(self, X, Y=None):
-        Xin, Yin = check_inputs(X, Y)
+        Xin, Yin, backend = check_inputs(X, Y)
         dists = torch.cdist(Xin, Yin, p=1)
-        return torch.exp(- self.gamma * dists)
+        if backend == "torch":
+            return torch.exp(- self.gamma * dists)
+        elif backend == "np":
+            return (torch.exp(- self.gamma * dists)).numpy()
 
 
 class SpeechKernel:
@@ -48,7 +59,7 @@ class SpeechKernel:
         self.reduce = reduce
 
     def __call__(self, X, Y=None):
-        Xin, Yin = check_inputs(X, Y)
+        Xin, Yin, backend = check_inputs(X, Y)
         n = len(Xin)
         m = len(Yin)
         # Since Y is always Xtrain, this normalization only uses the training data
@@ -65,7 +76,10 @@ class SpeechKernel:
         for j in range(m):
             exp_dist = torch.exp(- self.gamma * torch.sum((Xcentered - Ycentered[j]) ** 2, dim=2))
             K[j, :] = torch.mean(exp_dist, dim=1)
-        return K.T
+        if backend == "torch":
+            return K.T
+        elif backend == "np":
+            return K.T.numpy()
 
 
 class KAMKernel:

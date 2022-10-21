@@ -29,18 +29,17 @@ theta = torch.linspace(0, 1, 100)
 # ############################ EXAMPLES WITH OUTLIERS ##############################################
 Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
 
+Xtrain, Ytrain, Xtest, Ytest = Xtrain.numpy(), Ytrain.numpy(), Xtest.numpy(), Ytest.numpy()
 kerin = GaussianKernel(0.01)
 Ktrain = kerin(Xtrain)
 
 fourdict = FourierBasis(0, 40, (0, 1))
 
-phi = torch.from_numpy(fourdict.compute_matrix(theta.numpy()))
+phi = fourdict.compute_matrix(theta.numpy())
 
 # Normalize atoms
 m = len(theta)
-gram_mat = (1 / m) * phi.T @ phi
-phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
-phi_adj_phi = (1 / m) * phi.T @ phi
+phi_adj_phi = np.eye(fourdict.n_basis)
 
 
 m = len(theta)

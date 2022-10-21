@@ -47,9 +47,15 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
         esti.alpha = None
         count += 1
     if reduce_stat == "mean":
-        return torch.tensor(mses).mean(dim=0).clone().detach()
+        if isinstance(X, torch.Tensor):
+            return torch.tensor(mses).mean(dim=0).clone().detach()
+        else:
+            return mses.mean(axis=0)
     else:
-        return torch.tensor(mses).quantile(0.5, dim=0).clone().detach()
+        if isinstance(X, torch.Tensor):
+            return torch.tensor(mses).quantile(0.5, dim=0).clone().detach()
+        else:
+            return np.quantile(mses, 0.5)
 
 
 def cv_features(esti, features, X, Y, Ks=None, Yeval=None, phis=None, n_splits=5, reduce_stat="median", random_state=342):
@@ -86,12 +92,15 @@ def cv_features(esti, features, X, Y, Ks=None, Yeval=None, phis=None, n_splits=5
 def tune_consecutive(estis, losses, X, Y, K=None, 
                      Yeval=None, n_splits=5, reduce_stat="median", 
                      random_state=342, n_jobs=-1):
-    # with parallel_backend("loky"):
-    #     mses = Parallel(n_jobs=n_jobs)(
-    #         delayed(cv_consecutive)(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) 
-    #         for esti in estis)
-    mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) for esti in estis]
-    mses = torch.stack(mses)
+    with parallel_backend("loky"):
+        mses = Parallel(n_jobs=n_jobs)(
+            delayed(cv_consecutive)(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) 
+            for esti in estis)
+    # mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) for esti in estis]
+    if isinstance(mses[0], torch.Tensor):
+        mses = torch.stack(mses)
+    else:
+        mses = np.concatenate(mses)
     esti_argmin, losses_argmin = mses.argmin() // len(losses), mses.argmin() % len(losses)
     best_esti = estis[esti_argmin]
     best_esti.set_loss(losses[losses_argmin])

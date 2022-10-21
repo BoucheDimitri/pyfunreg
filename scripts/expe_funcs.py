@@ -19,7 +19,7 @@ sys.path.append(str(exec_path))
 
 
 from kernel import NystromFeatures, SpeechKernel
-from losses import Huber2Loss, SquareLoss, HuberInfLoss
+from losses import Huber2Loss, HuberInfLoss
 from regressors import FeaturesKPLOtherLoss, FeaturesKPL, SeparableKPL
 from optim import acc_proxgd, AccProxGD
 from model_selection import tune_consecutive, cv_consecutive, tune_features, cv_features, product_config
