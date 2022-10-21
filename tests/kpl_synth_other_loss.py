@@ -44,12 +44,16 @@ phi_adj_phi = (1 / m) * phi.T @ phi
 
 
 m = len(theta)
-n_feat = 100
+n_feat = 150
 nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
 hubloss = Huber2Loss(0.01)
-accproxgd = AccProxGD(n_epoch=20000, stepsize0=1e3, tol=1e-5, acc_temper=20)
-hubkpl 
+accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-6, acc_temper=20)
+
+hubkpl = FeaturesKPLOtherLoss(1e-10, hubloss, nysfeat, phi, accproxgd)
+hubkpl.fit(Xtrain, Ytrain, Ktrain)
+preds = hubkpl.predict(Xtest)
+mse = ((preds - Ytest) ** 2).mean()
 
 
 scores = []

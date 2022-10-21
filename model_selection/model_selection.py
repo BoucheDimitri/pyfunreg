@@ -42,7 +42,7 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
                 mses[count, l] = compute_mse(preds, [Yeval[j] for j in test_index])
             else:
                 mses[count, l] = compute_mse(preds, Ytest)
-        print(count)
+        # print(count)
         # Reinitialize alpha for next fold
         esti.alpha = None
         count += 1
@@ -86,12 +86,11 @@ def cv_features(esti, features, X, Y, Ks=None, Yeval=None, phis=None, n_splits=5
 def tune_consecutive(estis, losses, X, Y, K=None, 
                      Yeval=None, n_splits=5, reduce_stat="median", 
                      random_state=342, n_jobs=-1):
-    with parallel_backend("loky"):
-        mses = Parallel(n_jobs=n_jobs)(
-            delayed(cv_consecutive)(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) 
-            for esti in estis)
-    # for esti in estis:
-    #     mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state)]
+    # with parallel_backend("loky"):
+    #     mses = Parallel(n_jobs=n_jobs)(
+    #         delayed(cv_consecutive)(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) 
+    #         for esti in estis)
+    mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) for esti in estis]
     mses = torch.stack(mses)
     esti_argmin, losses_argmin = mses.argmin() // len(losses), mses.argmin() % len(losses)
     best_esti = estis[esti_argmin]

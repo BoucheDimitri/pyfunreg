@@ -15,24 +15,27 @@ from model_selection import tune_features, product_config, test_esti_partial, tu
 from regressors import FeaturesKPL ,FeaturesKPLOtherLoss
 from datasets import add_gp_outliers, load_gp_dataset
 from kernel import GaussianKernel, NystromFeatures
-from losses import Huber2Loss
+from losses import HuberInfLoss
 from optim import AccProxGD
 from functional_data import FourierBasis
 
 n_averaging = 2
 
 if __name__ == "__main__":
-    n_feat = 150
+    n_feat = 100
     kerin = GaussianKernel(config.KERNEL_INPUT_GAMMA)
-    lbda_grid = torch.logspace(-9, -5, 10)
-    loss_params = torch.linspace(0.01, 0.1, 20)
-    losses = [Huber2Loss(param) for param in loss_params]
+    lbda_grid = torch.logspace(-9, -4, 15)
+    loss_params = torch.linspace(0.015, 0.1, 20).flip(0)
+    # lbda_grid = torch.logspace(-9, -5, 2)
+    # loss_params = torch.linspace(0.01, 0.1, 2).flip(0)
+    losses = [HuberInfLoss(param) for param in loss_params]
     corrupt_params = config.CORRUPT_GLOBAL_FREQ_PARAMS
     corrupt_dicts = expe_funcs.interpret_corrupt_params(corrupt_params)
     corrupt_function = add_gp_outliers
     seeds_coefs_train, seeds_coefs_test, seeds_corrupt, seeds_cv = expe_funcs.draw_seeds(n_averaging, config.SEED)
+    seeds_nys = seeds_coefs_train + 5678
     base_path = str(exec_path.parent.parent.parent)
-    out_folder = base_path + "/outputs/results/robustness_synth/"
+    out_folder = base_path + "/outputs/results/synth/"
     expe_funcs.create_folder(out_folder)
     accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-6, acc_temper=20, verbose=False)
     fourdict = FourierBasis(0, 40, (0, 1))
@@ -40,7 +43,7 @@ if __name__ == "__main__":
     phi = torch.from_numpy(fourdict.compute_matrix(theta.numpy()))
     results = torch.zeros((n_averaging, len(corrupt_dicts)))
     for i in range(n_averaging):
-        nysfeat = NystromFeatures(kerin, n_feat, 432)
+        nysfeat = NystromFeatures(kerin, n_feat, seeds_nys[i], thresh=0)
         conf = {"regu": lbda_grid, "loss": None, "features": nysfeat, "phi": phi, "refit_features": True, "center_out": False, "optimizer": accproxgd}
         # conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
         confs = product_config(conf, leave_out=["phi"])
@@ -55,6 +58,7 @@ if __name__ == "__main__":
             preds = best_esti.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
             results[i, j] = sc
+            print(results)
         print(i)
-        with open(out_folder + "global_hub2" + str(i) + ".pkl", "wb") as outp:
+        with open(out_folder + "glob_hubinf_freq" + str(i) + ".pkl", "wb") as outp:
             pickle.dump(results, outp)

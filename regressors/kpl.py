@@ -620,8 +620,15 @@ class FeaturesKPLOtherLoss:
         self.loss = loss
 
     def grad(self, alpha):
-        G = self.loss.grad(self.Z @ alpha.T @ self.phi.T - self.Y) @ (self.phi / self.phi.shape[0])
-        return G.T @ self.Z + 2 * self.regu * alpha
+        try:
+            G = self.loss.grad(self.Z @ alpha.T @ self.phi.T - self.Y) @ (self.phi / self.phi.shape[0])
+            return G.T @ self.Z + 2 * self.regu * alpha
+        except RuntimeError:
+            print("Z:" + str(self.Z.shape))
+            print("alpha:" + str(alpha.T.shape))
+            print("phi:" + str(self.phi.T.shape))
+            print("Y:" + str(self.Y.shape))
+            raise RuntimeError
 
     def obj(self, alpha):
         return self.loss(self.Z @ alpha.T @ self.phi.T - self.Y) + self.regu * (alpha ** 2).sum()
