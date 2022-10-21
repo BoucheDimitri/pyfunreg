@@ -58,7 +58,7 @@ if __name__ == "__main__":
             preds = best_esti.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
             results[i, j] = sc
-            print(results)
+            print(j)
         print(i)
         with open(out_folder + "glob_hubinf_freq" + str(i) + ".pkl", "wb") as outp:
             pickle.dump(results, outp)

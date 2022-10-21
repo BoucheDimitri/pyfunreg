@@ -102,12 +102,11 @@ def tune_consecutive(estis, losses, X, Y, K=None,
 def tune_features(estis, features, X, Y, Ks=None, 
                   Yeval=None, phis=None, phi_test=None, n_splits=5, reduce_stat="median", 
                   random_state=342, n_jobs=-1):
-    with parallel_backend("loky"):
-        mses = Parallel(n_jobs=n_jobs)(
-            delayed(cv_features)(esti, features, X, Y, Ks, Yeval, phis, n_splits, reduce_stat, random_state) 
-            for esti in estis)
-    # for esti in estis:
-    #     mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state)]
+    # with parallel_backend("loky"):
+    #     mses = Parallel(n_jobs=n_jobs)(
+    #         delayed(cv_features)(esti, features, X, Y, Ks, Yeval, phis, n_splits, reduce_stat, random_state) 
+    #         for esti in estis)
+    mses = [cv_features(esti, features, X, Y, Ks, Yeval, phis, n_splits, reduce_stat, random_state) for esti in estis]
     mses = torch.stack(mses)
     esti_argmin, feats_argmin = mses.argmin() // len(features), mses.argmin() % len(features)
     best_esti = estis[esti_argmin]
