@@ -55,7 +55,7 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
         if isinstance(X, torch.Tensor):
             return torch.tensor(mses).quantile(0.5, dim=0).clone().detach()
         else:
-            return np.quantile(mses, 0.5)
+            return np.quantile(mses, 0.5, axis=0)
 
 
 def cv_features(esti, features, X, Y, Ks=None, Yeval=None, phis=None, n_splits=5, reduce_stat="median", random_state=342):
@@ -97,6 +97,7 @@ def tune_consecutive(estis, losses, X, Y, K=None,
             delayed(cv_consecutive)(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) 
             for esti in estis)
     # mses = [cv_consecutive(esti, losses, X, Y, K, Yeval, n_splits, reduce_stat, random_state) for esti in estis]
+    print(mses)
     if isinstance(mses[0], torch.Tensor):
         mses = torch.stack(mses)
     else:

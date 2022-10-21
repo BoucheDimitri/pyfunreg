@@ -10,7 +10,7 @@ pad = 20
 
 sys.path.append(os.getcwd())
 from datasets.outliers import add_gp_outliers
-from datasets import load_gp_dataset
+from datasets import add_gp_outliers, load_gp_dataset
 from kernel import GaussianKernel
 from regressors import SeparableKPL, FeaturesKPLOtherLoss
 from functional_data import FourierBasis
@@ -28,8 +28,11 @@ theta = torch.linspace(0, 1, 100)
 
 # ############################ EXAMPLES WITH OUTLIERS ##############################################
 Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
+Ytrain_corr, _ = add_gp_outliers(Ytrain, Xeval=None, freq_sample=0.1, intensity=1, seed=789, seed_gps=56)
+# CORRUPT_GLOBAL_PARAMS = {"freq_sample":0.1, "intensity": (0., 4., 10), "seed_gps": 56}
 
 Xtrain, Ytrain, Xtest, Ytest = Xtrain.numpy(), Ytrain.numpy(), Xtest.numpy(), Ytest.numpy()
+Ytrain_corr = Ytrain_corr.numpy()
 kerin = GaussianKernel(0.01)
 Ktrain = kerin(Xtrain)
 
@@ -43,7 +46,7 @@ phi_adj_phi = np.eye(fourdict.n_basis)
 
 
 m = len(theta)
-n_feat = 150
+n_feat = 100
 nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
 hubloss = Huber2Loss(0.01)
