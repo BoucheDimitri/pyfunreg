@@ -472,7 +472,7 @@ class FeaturesKPLDictsel:
 
 class FeaturesKPLWorking:
 
-    def __init__(self, regu, regu_dictsel, features, phi, phi_adj_phi=None, center_out=False, refit_features=False, regu_init=1e-8):
+    def __init__(self, regu, regu_dictsel, features, phi, optimizer, phi_adj_phi=None, center_out=False, refit_features=False, regu_init=1e-8):
         self.features = features
         self.regu = regu
         self.regu_dictsel = regu_dictsel
@@ -485,6 +485,7 @@ class FeaturesKPLWorking:
         self.refit_features = refit_features
         self.n = None
         self.working = None
+        self.optimizer = optimizer
 
     def forget_phi(self):
         self.phi = None
@@ -539,7 +540,7 @@ class FeaturesKPLWorking:
                 np.sqrt((alpha ** 2).sum(axis=1)).sum()
         return val
 
-    def fit(self, X, Y, K=None, alpha0=None, n_epoch=20000, tol=1e-4, beta=0.5, acc_temper=20, monitor=None, stepsize0=0.1, verbose=False):
+    def fit(self, X, Y, K=None, alpha0=None):
         """
         Parameters
         ----------
@@ -587,9 +588,7 @@ class FeaturesKPLWorking:
                                 sub_gram, self.Z.T @ sub_Yproj.T / (self.regu_init * n))
                 alpha0 = alpha0.T
             # Fit model on working set
-            alpha, _ = acc_proxgd_restart(
-                alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol,
-                beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0, verbose=verbose)
+            alpha, _ = self.optimizer(alpha0, self.prox, self.obj, self.full_obj, self.grad)
             # alpha, _ = acc_proxgd(
             #     alpha0, self.prox, self.obj, self.full_obj, self.grad, n_epoch=n_epoch, tol=tol,
             #     beta=beta, acc_temper=acc_temper, monitor=monitor, stepsize0=stepsize0)
@@ -607,7 +606,7 @@ class FeaturesKPLWorking:
                 norms = np.linalg.norm(grad, axis=1)
                 maxnorm = np.max(norms)
             # Dual norm is (infinity, 2)-norm, global optimality iff <= lambda
-            if maxnorm <= self.regu2:
+            if maxnorm <= self.regu_dictsel:
                 stop = True
                 self.alpha = alpha_full
             # If not global optimal, add atom which violates above optimality condition most
