@@ -45,10 +45,10 @@ CV_SPLIT = 5
 # CORRUPT_LOCAL_LOC_PARAMS = {"freq_sample":1., "intensity": 1., "freq_loc": (0, 0.3, 15)}
 
 
-CORRUPT_GLOBAL_PARAMS = {"freq_sample":0.1, "intensity": (0., 4., 10), "seed_gps": 56}
-CORRUPT_GLOBAL_FREQ_PARAMS = {"freq_sample":(0., 0.2, 10), "intensity": 3., "seed_gps": 56}
+CORRUPT_GLOBAL_PARAMS = {"freq_sample":0.1, "intensity": (0., 4., 7), "seed_gps": 56}
+CORRUPT_GLOBAL_FREQ_PARAMS = {"freq_sample":(0., 0.2, 7), "intensity": 3., "seed_gps": 56}
 
-CORRUPT_LOCAL_FREQ_PARAMS = {"freq_sample":(0, 1., 10), "intensity": 1., "freq_loc": 0.1}
-CORRUPT_LOCAL_LOC_PARAMS = {"freq_sample":1., "intensity": 1., "freq_loc": (0, 0.3, 10)}
+CORRUPT_LOCAL_FREQ_PARAMS = {"freq_sample":(0, 1., 7), "intensity": 1., "freq_loc": 0.1}
+CORRUPT_LOCAL_LOC_PARAMS = {"freq_sample":1., "intensity": 1., "freq_loc": (0, 0.3, 7)}
 
 

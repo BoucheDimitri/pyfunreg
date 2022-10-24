@@ -28,7 +28,7 @@ theta = torch.linspace(0, 1, 100)
 
 # ############################ EXAMPLES WITH OUTLIERS ##############################################
 Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
-Ytrain_corr, _ = add_gp_outliers(Ytrain, Xeval=None, freq_sample=0.1, intensity=1, seed=789, seed_gps=56)
+Ytrain_corr, _ = add_gp_outliers(Ytrain, Xeval=None, freq_sample=0.1, intensity=4, seed=789, seed_gps=56)
 # CORRUPT_GLOBAL_PARAMS = {"freq_sample":0.1, "intensity": (0., 4., 10), "seed_gps": 56}
 
 Xtrain, Ytrain, Xtest, Ytest = Xtrain.numpy(), Ytrain.numpy(), Xtest.numpy(), Ytest.numpy()
@@ -49,11 +49,11 @@ m = len(theta)
 n_feat = 100
 nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
-hubloss = Huber2Loss(0.01)
+hubloss = Huber2Loss(0.1)
 accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-6, acc_temper=20)
 
-hubkpl = FeaturesKPLOtherLoss(1e-10, hubloss, nysfeat, phi, accproxgd)
-hubkpl.fit(Xtrain, Ytrain, Ktrain)
+hubkpl = FeaturesKPLOtherLoss(1e-7, hubloss, nysfeat, phi, accproxgd)
+monitor = hubkpl.fit(Xtrain, Ytrain, Ktrain)
 preds = hubkpl.predict(Xtest)
 mse = ((preds - Ytest) ** 2).mean()
 

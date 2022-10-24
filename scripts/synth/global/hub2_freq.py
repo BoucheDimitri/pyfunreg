@@ -27,8 +27,9 @@ n_averaging = 10
 if __name__ == "__main__":
     n_feat = 100
     kerin = GaussianKernel(config.KERNEL_INPUT_GAMMA)
-    lbda_grid = np.geomspace(1e-7, 1e-5, 10)
-    loss_params = np.flip(np.linspace(0.01, 0.1, 20))
+    # lbda_grid = np.geomspace(1e-7, 1e-5, 10)
+    lbda_grid = np.geomspace(1e-7, 1e-5, 7)
+    loss_params = np.flip(np.linspace(0.01, 0.1, 10))
     # lbda_grid = np.geomspace(1e-7, 1e-5, 2)
     # loss_params = np.flip(np.linspace(0.01, 0.1, 2))
     losses = [Huber2Loss(param) for param in loss_params]
@@ -65,12 +66,12 @@ if __name__ == "__main__":
                 torch.from_numpy(Ytrain), Xeval=None, **corrupt_dicts[j], seed=seeds_corrupt[i])
             Ytrain_corr = Ytrain_corr.numpy()
             best_esti, mses = tune_consecutive(estis, losses, Xtrain, Ytrain_corr, K=Ktrain, Yeval=None,
-                                               n_splits=5, reduce_stat="median", random_state=seeds_cv[i], n_jobs=cpu_count())
+                                               n_splits=5, reduce_stat="median", random_state=seeds_cv[i], n_jobs=1)
             preds = best_esti.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
             results[i, j] = sc
             print(results)
-            print(j)
-        print(i)
-        with open(out_folder + "glob_hub2_freq" + str(i) + ".pkl", "wb") as outp:
+            print("Corrupt param: " + str(j))
+        print("Averaging no: " + str(i))
+        with open(out_folder + "glob_hub2_freq_light" + str(i) + ".pkl", "wb") as outp:
             pickle.dump(results, outp)

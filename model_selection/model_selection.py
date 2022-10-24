@@ -1,5 +1,6 @@
 from inspect import Attribute
 from typing import Iterable
+from xml.dom.minidom import Attr
 import torch
 import numpy as np
 from sklearn.model_selection import KFold
@@ -31,10 +32,13 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
         else:
             Ktrain, Ktest = None, None
         for l, loss in enumerate(losses):
-            try:
-                alpha0 = esti.alpha.detach().clone()
-            except AttributeError:
+            if l == 0:
                 alpha0 = None
+            else:
+                try:
+                    alpha0 = esti.alpha.detach().clone()
+                except AttributeError:
+                    alpha0 = esti.alpha.copy()
             esti.set_loss(loss)
             esti.fit(Xtrain, Ytrain, Ktrain, alpha0)
             preds = esti.predict(Xtest, Ktest)
@@ -45,6 +49,7 @@ def cv_consecutive(esti, losses, X, Y, K=None, Yeval=None, n_splits=5, reduce_st
         # print(count)
         # Reinitialize alpha for next fold
         esti.alpha = None
+        print(count)
         count += 1
     if reduce_stat == "mean":
         if isinstance(X, torch.Tensor):
