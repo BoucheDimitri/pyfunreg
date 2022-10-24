@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 torch.from_numpy(Ytrain), Xeval=None, **corrupt_dicts[j], seed=seeds_corrupt[i])
             Ytrain_corr = Ytrain_corr.numpy()
             best_esti, mses = tune_consecutive(estis, losses, Xtrain, Ytrain_corr, K=Ktrain, Yeval=None,
-                                               n_splits=5, reduce_stat="median", random_state=seeds_cv[i], n_jobs=cpu_count() // 4)
+                                               n_splits=5, reduce_stat="median", random_state=seeds_cv[i], n_jobs=cpu_count() // 5)
             preds = best_esti.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
             results[i, j] = sc
