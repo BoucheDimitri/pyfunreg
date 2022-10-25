@@ -13,7 +13,7 @@ sys.path.append(os.getcwd())
 from datasets.outliers import add_gp_outliers
 from datasets import add_gp_outliers, load_gp_dataset, SyntheticGPmixture
 from kernel import GaussianKernel
-from regressors import SeparableKPL, FeaturesKPLOtherLoss, FeaturesKPLWorking
+from regressors import SeparableKPL, FeaturesKPLOtherLoss, FeaturesKPLWorking, FeaturesKPL
 from functional_data import FourierBasis
 from kernel import NystromFeatures
 from losses import Huber2Loss
@@ -24,7 +24,7 @@ torch.set_default_dtype(torch.float64)
 
 seeds_coefs_train = np.random.choice(np.arange(100, 100000), 10, replace=False)
 seeds_coefs_test = np.random.choice(np.arange(100, 100000),10, replace=False)
-theta = torch.linspace(0, 1, 100)
+theta = torch.linspace(0, 1, 300)
 
 
 # ############################ EXAMPLES WITH OUTLIERS ##############################################
@@ -63,31 +63,39 @@ m = len(theta)
 n_feat = 100
 nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
-accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-6, acc_temper=20)
+accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-7, acc_temper=20)
 
-wkpl = FeaturesKPLWorking(1e-8, 1.5e-3, nysfeat, phi.numpy(), accproxgd, phi_adj_phi.numpy())
+wkpl = FeaturesKPLWorking(1e-9, 1e-3, nysfeat, phi.numpy(), accproxgd, phi_adj_phi.numpy(), regu_init=1e-9)
 monitor = wkpl.fit(Xtrain, Ytrain, Ktrain)
 preds = wkpl.predict(Xtest)
 mse = ((preds - Ytest) ** 2).mean()
 print(mse)
 alpha0 = wkpl.alpha.copy()
 
-
-hubloss = Huber2Loss(0.09526316)
-hubkpl = FeaturesKPLOtherLoss(1e-7, hubloss, nysfeat, phi, accproxgd)
-monitor = hubkpl.fit(Xtrain, Ytrain, Ktrain, alpha0=alpha0)
-preds = hubkpl.predict(Xtest)
-mse = ((preds - Ytest) ** 2).mean()
-alpha0 = hubkpl.alpha.copy()
-
-
-
-
-
-scores = []
-for regu in torch.logspace(-10, 1, 100):
-    sepkpl = SeparableKPL(regu, kerin, torch.eye(phi.shape[1]), phi)
-    sepkpl.fit(Xtrain, Ytrain)
-    preds = sepkpl.predict(Xtest)
+working_sets = []
+scs = []
+lbda_grid = np.geomspace(1e-6, 5e-2, 20)
+for i, lbda in enumerate(lbda_grid):
+    wkpl = FeaturesKPLWorking(1e-9, lbda, nysfeat, phi.numpy(), accproxgd, phi_adj_phi.numpy(), regu_init=1e-9)
+    monitor = wkpl.fit(Xtrain, Ytrain, Ktrain)
+    preds = wkpl.predict(Xtest)
     mse = ((preds - Ytest) ** 2).mean()
-    scores.append(mse)
+    scs.append(mse)
+    working_sets.append(wkpl.working.copy())
+    print("Lambda number " + str(i))
+
+fig, ax = plt.subplots(2)
+ax[0].plot(lbda_grid, scs, marker="o")
+ax[0].set_xscale("log")
+ax[0].set_yscale("log")
+ax[1].plot(lbda_grid, [len(w) for w in working_sets], marker="o")
+ax[1].set_xscale("log")
+plt.show()
+
+
+i = 10
+kpl = FeaturesKPL(1e-10, nysfeat, phi[:, working_sets[i]].numpy())
+kpl.fit(Xtrain, Ytrain, Ktrain)
+preds = kpl.predict(Xtest)
+mse = ((preds - Ytest) ** 2).mean()
+print(mse)

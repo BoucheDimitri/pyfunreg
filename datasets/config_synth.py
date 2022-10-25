@@ -3,7 +3,8 @@ DEFAULT_TORCH_DTYPE = "float64"
 # Number of samples
 N_SAMPLES = 200
 # Number of evaluation per function
-N_THETA = 100
+# N_THETA = 100
+N_THETA = 300
 # Number of test samples
 N_TEST = 150
 
