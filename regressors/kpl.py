@@ -195,7 +195,7 @@ class FeaturesKPL:
             self.alpha = torch.from_numpy(alpha.T)
         else:
             alpha = sb04qd(q, d, Z.T @ Z / (self.regu * n),
-                           self.phi_adj_phi, Z.T @ Yproj / (self.regu * n))
+                           self.phi_adj_phi, Z.T @ Yproj.T / (self.regu * n))
             self.alpha = alpha.T
 
     def predict_coefs(self, X, K=None):

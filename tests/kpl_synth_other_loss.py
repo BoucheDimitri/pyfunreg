@@ -45,6 +45,10 @@ m = len(theta)
 phi_adj_phi = np.eye(fourdict.n_basis)
 
 
+lbda_grid = np.geomspace(1e-7, 1e-5, 10)
+loss_params = np.flip(np.linspace(0.01, 0.1, 20))
+
+
 m = len(theta)
 n_feat = 100
 nysfeat = NystromFeatures(kerin, n_feat, 432)
@@ -53,9 +57,21 @@ hubloss = Huber2Loss(0.1)
 accproxgd = AccProxGD(n_epoch=20000, stepsize0=1, tol=1e-6, acc_temper=20)
 
 hubkpl = FeaturesKPLOtherLoss(1e-7, hubloss, nysfeat, phi, accproxgd)
-monitor = hubkpl.fit(Xtrain, Ytrain, Ktrain)
+monitor = hubkpl.fit(Xtrain, Ytrain_corr, Ktrain)
 preds = hubkpl.predict(Xtest)
 mse = ((preds - Ytest) ** 2).mean()
+alpha0 = hubkpl.alpha.copy()
+
+
+hubloss = Huber2Loss(0.09526316)
+hubkpl = FeaturesKPLOtherLoss(1e-7, hubloss, nysfeat, phi, accproxgd)
+monitor = hubkpl.fit(Xtrain, Ytrain, Ktrain, alpha0=alpha0)
+preds = hubkpl.predict(Xtest)
+mse = ((preds - Ytest) ** 2).mean()
+alpha0 = hubkpl.alpha.copy()
+
+
+
 
 
 scores = []
