@@ -1,10 +1,3 @@
-import global_config as config
-import expe_funcs
-from model_selection import product_config, tune
-from datasets import load_gp_dataset, add_local_outliers
-from kernel import GaussianKernel, NystromFeatures
-from functional_data import FourierBasis
-from regressors import FeaturesKPL
 import os
 import sys
 import pathlib
@@ -17,6 +10,14 @@ exec_path = pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(str(exec_path.parent.parent.parent))
 sys.path.append(str(exec_path.parent.parent))
 sys.path.append(str(exec_path.parent))
+
+import global_config as config
+import expe_funcs
+from model_selection import product_config, tune
+from datasets import load_gp_dataset, add_local_outliers
+from kernel import GaussianKernel, NystromFeatures
+from functional_data import FourierBasis
+from regressors import FeaturesKPL
 
 
 n_averaging = 10
