@@ -47,7 +47,7 @@ if __name__ == "__main__":
                 "refit_features": True, "center_out": False}
         # conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
         confs = product_config(conf, leave_out=["phi"])
-        estis = [FeaturesKPLOtherLoss(**params) for params in confs]
+        estis = [FeaturesKPL(**params) for params in confs]
         Xtrain, Ytrain, Xtest, Ytest = load_gp_dataset(
             seeds_coefs_train[i], seeds_coefs_test[i])
         Xtrain, Ytrain, Xtest, Ytest = Xtrain.numpy(
