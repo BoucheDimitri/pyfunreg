@@ -2,6 +2,7 @@ from tkinter import E
 import numpy as np
 from slycot import sb04qd
 import torch
+import time
 
 from optim import acc_proxgd
 from optim.proxgd import acc_proxgd_restart
@@ -165,7 +166,7 @@ class FeaturesKPL:
     def set_features(self, features):
         self.features = features
 
-    def fit(self, X, Y, K=None, refit_features=False):
+    def fit(self, X, Y, K=None, refit_features=False, return_timer=False):
         """
         Parameters
         ----------
@@ -190,13 +191,19 @@ class FeaturesKPL:
         if self.phi_adj_phi is None:
             self.phi_adj_phi = (1 / m) * self.phi.T @ self.phi
         if isinstance(K, torch.Tensor):
+            start = time.process_time()
             alpha = sb04qd(q, d, (Z.T @ Z).numpy() / (self.regu * n),
                            self.phi_adj_phi.numpy(), Z.T.numpy() @ Yproj.T.numpy() / (self.regu * n))
+            end = time.process_time()
             self.alpha = torch.from_numpy(alpha.T)
         else:
+            start = time.process_time()
             alpha = sb04qd(q, d, Z.T @ Z / (self.regu * n),
                            self.phi_adj_phi, Z.T @ Yproj.T / (self.regu * n))
+            end = start = time.process_time()
             self.alpha = alpha.T
+        if return_timer:
+            return end - start
 
     def predict_coefs(self, X, K=None):
         """
