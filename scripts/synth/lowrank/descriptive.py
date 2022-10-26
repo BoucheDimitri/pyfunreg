@@ -25,7 +25,7 @@ if __name__ == "__main__":
     n_averaging = 10
     n_feat = 100
     thresh = 1e-1
-    ns_per_std = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 90, 100]
+    ns_per_std = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
     # ns_per_std = [1, 5, 10]
     kerin = GaussianKernel(config.KERNEL_INPUT_GAMMA)
     lbda_grid = np.geomspace(1e-8, 1e-2, 50)

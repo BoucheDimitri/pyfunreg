@@ -200,7 +200,7 @@ class FeaturesKPL:
             start = time.process_time()
             alpha = sb04qd(q, d, Z.T @ Z / (self.regu * n),
                            self.phi_adj_phi, Z.T @ Yproj.T / (self.regu * n))
-            end = start = time.process_time()
+            end = time.process_time()
             self.alpha = alpha.T
         if return_timer:
             return end - start
