@@ -82,7 +82,7 @@ if __name__ == "__main__":
             conf_thresh = {"regu": lbda_grid, "features": nysfeat, "phi": phi_thresh.numpy(), "phi_adj_phi": np.diag(uthresh),
             "refit_features": True, "center_out": False}
             # conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
-            confs_thresh = product_config(conf, leave_out=["phi", "phi_adj_phi"])
+            confs_thresh = product_config(conf_thresh, leave_out=["phi", "phi_adj_phi"])
             estis_thresh = [FeaturesKPL(**params) for params in confs_thresh]
             best_esti, mses = tune(estis, Xtrain, Ytrain, K=Ktrain, Yeval=None,
                                    n_splits=5, reduce_stat="mean", random_state=seeds_cv[i], n_jobs=1)
