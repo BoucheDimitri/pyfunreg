@@ -12,12 +12,9 @@ sys.path.append(str(exec_path.parent.parent))
 sys.path.append(str(exec_path.parent))
 
 from regressors import FeaturesKPLWorking
-from functional_data import FourierBasis
 from optim import AccProxGD
-from losses import Huber2Loss
 from kernel import GaussianKernel, NystromFeatures
-from datasets import add_gp_outliers, load_gp_dataset, N_THETA, SyntheticGPmixture
-from model_selection import tune_features, product_config, test_esti_partial, tune_consecutive
+from datasets import load_gp_dataset, N_THETA, SyntheticGPmixture
 import expe_funcs
 import global_config as config
 
@@ -27,7 +24,7 @@ n_averaging = 10
 if __name__ == "__main__":
     n_feat = 100
     kerin = GaussianKernel(config.KERNEL_INPUT_GAMMA)
-    lbda_grid = np.geomspace(1e-7, 1e-1, 200)
+    lbda_grid = np.geomspace(1e-7, 1e-1, 100)
     seeds_coefs_train, seeds_coefs_test, seeds_gps, seeds_cv = expe_funcs.draw_seeds(
         n_averaging, config.SEED)
     seeds_nys = seeds_coefs_train + 5678
@@ -66,13 +63,12 @@ if __name__ == "__main__":
         phi_adj_phi = (1 / m) * phi.T @ phi
         for l, lbda in enumerate(lbda_grid):
             wkpl = FeaturesKPLWorking(1e-9, lbda, nysfeat, phi.numpy(), accproxgd, phi_adj_phi.numpy(), regu_init=1e-9, refit_features=True)
-            print(Xtest.shape)
+            wkpl.fit(Xtrain, Ytrain, Ktrain)
             preds = wkpl.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
             results[i, l] = sc
             working_sets[i].append(wkpl.working)
-            print(results)
             print("Lambda param no: " + str(l))
-        print("Averaging no: " + str(i))
+        print("AVERAGING NO: " + str(i))
         with open(out_folder + "select_descriptive_" + str(i) + ".pkl", "wb") as outp:
-            pickle.dump(results, outp)
+            pickle.dump((results, working_sets), outp)
