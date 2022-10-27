@@ -85,7 +85,7 @@ if __name__ == "__main__":
             confs_thresh = product_config(conf_thresh, leave_out=["phi", "phi_adj_phi"])
             estis_thresh = [FeaturesKPL(**params) for params in confs_thresh]
             best_esti, mses = tune(estis, Xtrain, Ytrain, K=Ktrain, Yeval=None,
-                                   n_splits=5, reduce_stat="mean", random_state=seeds_cv[i], n_jobs=1)
+                                   n_splits=5, reduce_stat="mean", random_state=seeds_cv[i], n_jobs=cpu_count() // 4)
             timers_fit[i, p] = best_esti.fit(Xtrain, Ytrain, Ktrain, return_timer=True)
             preds = best_esti.predict(Xtest)
             sc = ((preds - Ytest) ** 2).mean()
