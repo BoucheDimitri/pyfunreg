@@ -24,7 +24,7 @@ from model_selection import product_config, tune
 if __name__ == "__main__":
     n_averaging = 10
     n_feat = 100
-    thresh = 1e-1
+    thresh = 5e-5
     ns_per_std = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
     # ns_per_std = [1, 5, 10]
     kerin = GaussianKernel(config.KERNEL_INPUT_GAMMA)
@@ -75,8 +75,8 @@ if __name__ == "__main__":
             u, V = np.linalg.eigh(phi_adj_phi)
             end = time.process_time()
             timers_svd[i, p] = end - start
-            uthresh = u[u > thresh]
-            Vthresh = V[:, u > thresh]
+            uthresh = u[u > thresh * len(u)]
+            Vthresh = V[:, u > thresh * len(u)]
             phi_thresh = phi @ Vthresh
             phi_adj_phi_thresh = np.diag(uthresh)
             conf_thresh = {"regu": lbda_grid, "features": nysfeat, "phi": phi_thresh.numpy(), "phi_adj_phi": np.diag(uthresh),
@@ -98,5 +98,5 @@ if __name__ == "__main__":
             results_thresh[i, p] = sc_thresh
             print("N DICT: " + str(d))
         print("AVERAGING NO: " + str(i))
-        with open(out_folder + "lowrank_descriptive_" + str(i) + ".pkl", "wb") as outp:
+        with open(out_folder + "lowrank_dthresh_" + str(i) + ".pkl", "wb") as outp:
             pickle.dump((timers_svd, results, results_thresh, timers_fit, timers_tfit), outp)

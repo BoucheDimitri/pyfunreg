@@ -41,30 +41,48 @@ Xtrain, Ytrain, Xtest, Ytest = Xtrain.numpy(), Ytrain.numpy(), Xtest.numpy(), Yt
 STDS_GPS_OUT = [0.05, 0.1, 0.5, 0.7]
 GP_SCALE = 1.5
 
-atoms_stds = [0.001, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5, 0.7]
-n_per_std = 100
-# Parasite atoms
-stds_out = []
-for n, _ in enumerate(atoms_stds):
-    stds_out += [atoms_stds[n] for i in range(n_per_std)]
-stds_in = stds_out
-scale = 1.5
-n_atoms = len(stds_in)
-gamma_cov = torch.Tensor([stds_in, stds_out]).numpy()
-data_gp = SyntheticGPmixture(n_atoms=n_atoms, gamma_cov=gamma_cov, scale=scale)
-data_gp.drawGP(theta, seed_gp=764)
-big_dict = data_gp.GP_output
-phi = big_dict.T
-m = len(theta)
-gram_mat = (1 / m) * phi.T @ phi
-phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
-phi_adj_phi = (1 / m) * phi.T @ phi
-d = phi.shape[1]
+ns_per_std = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 60, 80, 100]
+eigvals = []
 
-start = time.process_time()
-u, V = np.linalg.eigh(phi_adj_phi)
-end = time.process_time()
-print(end - start)
+for i in ns_per_std:
+    atoms_stds = [0.001, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5, 0.7]
+    n_per_std = i
+    # Parasite atoms
+    stds_out = []
+    for n, _ in enumerate(atoms_stds):
+        stds_out += [atoms_stds[n] for i in range(n_per_std)]
+    stds_in = stds_out
+    scale = 1.5
+    n_atoms = len(stds_in)
+    gamma_cov = torch.Tensor([stds_in, stds_out]).numpy()
+    data_gp = SyntheticGPmixture(n_atoms=n_atoms, gamma_cov=gamma_cov, scale=scale)
+    data_gp.drawGP(theta, seed_gp=764)
+    big_dict = data_gp.GP_output
+    phi = big_dict.T
+    m = len(theta)
+    gram_mat = (1 / m) * phi.T @ phi
+    phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
+    phi_adj_phi = (1 / m) * phi.T @ phi
+    d = phi.shape[1]
+    u, V = np.linalg.eigh(phi_adj_phi)
+    eigvals.append(u)
+    print(i)
+
+thresh = 1e-4
+n_taken = []
+for u in eigvals:
+    n_taken.append(len(u[u > thresh * len(u)]))
+
+
+n_taken_fix = []
+thresh = 1e-1
+for u in eigvals:
+    n_taken_fix.append(len(u[u > thresh]))
+
+
+fact = 1e-3
+for 
+
 plt.plot(u)
 plt.yscale("log")
 plt.show()
