@@ -91,7 +91,7 @@ if __name__ == "__main__":
             sc = ((preds - Ytest) ** 2).mean()
             results[i, p] = sc
             best_esti_thresh, mses = tune(estis_thresh, Xtrain, Ytrain, K=Ktrain, Yeval=None,
-                                   n_splits=5, reduce_stat="mean", random_state=seeds_cv[i], n_jobs=1)
+                                   n_splits=5, reduce_stat="mean", random_state=seeds_cv[i], n_jobs=cpu_count() // 4)
             timers_tfit[i, p] = best_esti_thresh.fit(Xtrain, Ytrain, Ktrain, return_timer=True)
             preds = best_esti_thresh.predict(Xtest)
             sc_thresh = ((preds - Ytest) ** 2).mean()

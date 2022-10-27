@@ -42,7 +42,7 @@ STDS_GPS_OUT = [0.05, 0.1, 0.5, 0.7]
 GP_SCALE = 1.5
 
 atoms_stds = [0.001, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5, 0.7]
-n_per_std = 40
+n_per_std = 100
 # Parasite atoms
 stds_out = []
 for n, _ in enumerate(atoms_stds):
@@ -61,7 +61,10 @@ phi *= torch.sqrt((1 / torch.diag(gram_mat).unsqueeze(0)))
 phi_adj_phi = (1 / m) * phi.T @ phi
 d = phi.shape[1]
 
+start = time.process_time()
 u, V = np.linalg.eigh(phi_adj_phi)
+end = time.process_time()
+print(end - start)
 plt.plot(u)
 plt.yscale("log")
 plt.show()
@@ -78,7 +81,7 @@ nysfeat = NystromFeatures(kerin, n_feat, 432)
 nysfeat.fit(Xtrain, Ktrain)
 
 
-kpl = FeaturesKPL(1e-10, nysfeat, phi.numpy(), phi_adj_phi.numpy())
+kpl = FeaturesKPL(1e-7, nysfeat, phi.numpy(), phi_adj_phi.numpy())
 start = time.process_time()
 kpl.fit(Xtrain, Ytrain, Ktrain)
 end = time.process_time()
@@ -88,7 +91,7 @@ mse = ((preds - Ytest) ** 2).mean()
 print(mse)
 
 
-thresh = 5e-1
+thresh = 1e-1
 uthresh = u[u > thresh]
 Vthresh = V[:, u > thresh]
 phi_thresh = phi @ Vthresh
@@ -101,6 +104,7 @@ end = time.process_time()
 print(end - start)
 preds = tkpl.predict(Xtest)
 mse = ((preds - Ytest) ** 2).mean()
+print(mse)
 
 lbda_grid = np.geomspace(1e-7, 1e-2, 200)
 scs_thresh = []
@@ -111,4 +115,3 @@ for lbda in lbda_grid:
     mse = ((preds - Ytest) ** 2).mean()
     scs_thresh.append(mse)
 
-print(mse)
