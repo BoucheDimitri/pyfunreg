@@ -73,7 +73,7 @@ if __name__ == "__main__":
             confs = product_config(conf, leave_out=["phi", "phi_adj_phi"])
             estis = [FeaturesKPL(**params) for params in confs]
             start = time.process_time()
-            u, V = linalg.eigh(phi_adj_phi, subset_by_value=(thresh * len(u), np.inf))
+            u, V = linalg.eigh(phi_adj_phi, subset_by_value=(thresh * len(phi_adj_phi), np.inf))
             end = time.process_time()
             timers_svd[i, p] = end - start
             # uthresh = u[u > thresh * len(u)]
