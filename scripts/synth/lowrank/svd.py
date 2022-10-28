@@ -4,7 +4,6 @@ import pathlib
 import torch
 import pickle
 import numpy as np
-from scipy import linalg
 from multiprocessing import cpu_count
 import time
 
@@ -73,7 +72,7 @@ if __name__ == "__main__":
             confs = product_config(conf, leave_out=["phi", "phi_adj_phi"])
             estis = [FeaturesKPL(**params) for params in confs]
             start = time.process_time()
-            u, V = linalg.eigh(phi_adj_phi, subset_by_value=(thresh * len(u), np.inf))
+            u, V = np.linalg.eigh(phi_adj_phi)
             end = time.process_time()
             timers_svd[i, p] = end - start
             uthresh = u[u > thresh * len(u)]
@@ -99,5 +98,5 @@ if __name__ == "__main__":
             results_thresh[i, p] = sc_thresh
             print("N DICT: " + str(d))
         print("AVERAGING NO: " + str(i))
-        with open(out_folder + "lowrank_dthresh_subset_" + str(i) + ".pkl", "wb") as outp:
+        with open(out_folder + "lowrank_dthresh_" + str(i) + ".pkl", "wb") as outp:
             pickle.dump((timers_svd, results, results_thresh, timers_fit, timers_tfit), outp)
