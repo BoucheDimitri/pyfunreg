@@ -76,11 +76,13 @@ if __name__ == "__main__":
             u, V = linalg.eigh(phi_adj_phi, subset_by_value=(thresh * len(u), np.inf))
             end = time.process_time()
             timers_svd[i, p] = end - start
-            uthresh = u[u > thresh * len(u)]
-            Vthresh = V[:, u > thresh * len(u)]
-            phi_thresh = phi @ Vthresh
-            phi_adj_phi_thresh = np.diag(uthresh)
-            conf_thresh = {"regu": lbda_grid, "features": nysfeat, "phi": phi_thresh.numpy(), "phi_adj_phi": np.diag(uthresh),
+            # uthresh = u[u > thresh * len(u)]
+            # Vthresh = V[:, u > thresh * len(u)]
+            # phi_thresh = phi @ Vthresh
+            # phi_adj_phi_thresh = np.diag(uthresh)
+            phi_thresh = phi @ V
+            phi_adj_phi_thresh = np.diag(u)
+            conf_thresh = {"regu": lbda_grid, "features": nysfeat, "phi": phi_thresh.numpy(), "phi_adj_phi": phi_adj_phi_thresh,
             "refit_features": True, "center_out": False}
             # conf = {"regu": torch.logspace(-10, -5, 2), "features": None, "phi": None, "refit_features": False, "center_out": [True, False]}
             confs_thresh = product_config(conf_thresh, leave_out=["phi", "phi_adj_phi"])
