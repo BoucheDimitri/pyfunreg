@@ -5,7 +5,7 @@ import numpy as np
 from . import synthetic_func_or as synth
 
 
-def add_local_outliers(X, Xeval=None, freq_sample=1., freq_loc=0.1, intensity=0.5, seed=453):
+def add_local_outliers(X, Xeval=None, freq_sample=1., freq_loc=0.1, intensity=0.5, seed=453, return_inds=False):
     n, m = X.shape
     res = X.detach().clone()
     if Xeval is not None:
@@ -24,7 +24,11 @@ def add_local_outliers(X, Xeval=None, freq_sample=1., freq_loc=0.1, intensity=0.
     if Xeval is not None:
         return res, res_eval
     else:
-        return res, None
+        if return_inds:
+            return res, contaminated_inds
+        else:
+            return res, None
+    
 
 
 def add_label_noise(X, Xeval=None, freq_sample=0.02, seed=443, coef=-1., alternate_coef=False):
@@ -47,7 +51,7 @@ def add_label_noise(X, Xeval=None, freq_sample=0.02, seed=443, coef=-1., alterna
         return res, None
 
 
-def add_gp_outliers(X, Xeval=None, freq_sample=0.02, seed=443, seed_gps=56, covs_params=(0.01, 0.05, 1, 4), scale=2, intensity=2.5, additive=True):
+def add_gp_outliers(X, Xeval=None, freq_sample=0.02, seed=443, seed_gps=56, covs_params=(0.01, 0.05, 1, 4), scale=2, intensity=2.5, additive=True, return_inds=False):
     n, m = X.shape
     res = X.detach().clone()
     if Xeval is not None:
@@ -66,7 +70,10 @@ def add_gp_outliers(X, Xeval=None, freq_sample=0.02, seed=443, seed_gps=56, covs
             res_eval[contaminated_inds] += intensity * drawns_gps.numpy()
             return res, res_eval
         else:
-            return res, None
+            if return_inds:
+                return res, contaminated_inds
+            else:
+                return res, None
     else:
         res[contaminated_inds] = intensity * drawns_gps
         # return intensity * drawns_gps
@@ -74,7 +81,10 @@ def add_gp_outliers(X, Xeval=None, freq_sample=0.02, seed=443, seed_gps=56, covs
             res_eval[contaminated_inds] = intensity * drawns_gps.numpy()
             return res, res_eval
         else:
-            return res, None
+            if return_inds:
+                return res, contaminated_inds
+            else:
+                return res, None
 
 
 def add_local_gnoise(X, Xeval=None, freq_sample=1., freq_loc=0.2, intensity=0.1, seed=4453):
