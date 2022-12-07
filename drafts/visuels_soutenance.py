@@ -12,11 +12,11 @@ from matplotlib import cm
 
 # Plot parameters
 plt.rcParams.update({"pdf.fonttype": 42})
-plt.rcParams.update({"font.size": 35})
+plt.rcParams.update({"font.size": 30})
 # plt.rcParams.update({'ps.useafm': True})
-plt.rcParams.update({"lines.linewidth": 2})
+plt.rcParams.update({"lines.linewidth": 3.2})
 plt.rcParams.update({"lines.markersize": 7})
-plt.rcParams.update({"axes.linewidth": 2})
+plt.rcParams.update({"axes.linewidth": 1})
 plt.rcParams.update({"xtick.major.size": 5})
 plt.rcParams.update({"xtick.major.width": 1.5})
 plt.rcParams.update({"ytick.major.size": 5})
@@ -67,7 +67,7 @@ X, Y = load_raw_speech(os.getcwd() + "/datasets/dataspeech/raw/")
 Xtrain, Ytrain_full_ext, Ytrain_full, Xtest, Ytest_full_ext, Ytest_full = process_speech(X, Y, shuffle_seed=None, n_train=300)
 
 
-# ######################## Lip data #############################################################################
+# ######################## Lip data outliers #############################################################################
 Xlip = pd.read_csv(os.getcwd() + "/datasets/datalip/EMGmatlag.csv", header=None).values.T
 Ylip = pd.read_csv(os.getcwd() + "/datasets/datalip/lipmatlag.csv", header=None).values.T
 
@@ -78,32 +78,48 @@ for i in range(len(Xlip)):
 plt.show()
 
 Ylip_lout, continds_loc = add_local_outliers(torch.from_numpy(Ylip), intensity=1.5,freq_loc=0.05, freq_sample=0.05, return_inds=True)
-Ylip_gout, continds_glob = add_gp_outliers(torch.from_numpy(Ylip), intensity=1, freq_sample=0.1, return_inds=True, additive=True)
+Ylip_gout, continds_glob = add_gp_outliers(torch.from_numpy(Ylip), intensity=1.3, freq_sample=0.05, return_inds=True, additive=True)
+theta = np.linspace(0, 1, 641)
+
+
+fig, ax = plt.subplots(ncols=2, sharey="row")
 
 for i in range(len(Ylip)):
     if i not in continds_loc:
-        plt.plot(Ylip[i], c="tab:blue", alpha=0.3)
+        ax[0].plot(theta, Ylip[i], c="tab:blue", alpha=0.3)
 for i in continds_loc:
-    plt.plot(Ylip_lout[i], c="tab:red", alpha=0.6)
-plt.show()
-
+    ax[0].plot(theta, Ylip_lout[i], c="tab:red", alpha=0.9)
 
 for i in range(len(Ylip)):
     if i not in continds_glob:
-        plt.plot(Ylip[i], c="tab:blue", alpha=0.4)
+        ax[1].plot(theta, Ylip[i], c="tab:blue", alpha=0.3)
 for i in continds_glob:
-    plt.plot(Ylip_gout[i], c="tab:red", alpha=0.6)
+    ax[1].plot(theta, Ylip_gout[i], c="tab:red", alpha=0.9)
+ax[0].set_xlabel("$\\theta$")
+ax[1].set_xlabel("$\\theta$")
+
 plt.show()
 
-plt.plot(Ylip_lout[0])
-plt.plot(Ylip_lout[1])
-# plt.plot(Ylip[0])
+# ####################### Partial observations lip data #################################################################
+viridis = cm.get_cmap('viridis', 12)(np.linspace(0, 1, len(Xlip)))
+
+fig, ax = plt.subplots(ncols=3, sharey="col")
+
+for i in range(len(Xlip)):
+    ax[0].plot(theta, Xlip[i], c=viridis[i], alpha=0.9)
+
+for i in range(len(Xlip)):
+    inds = np.random.randint(0, 641, 100)
+    ax[1].plot(theta, Ylip[i], c=viridis[i], alpha=0.9)
+
+for i in range(len(Xlip)):
+    inds = np.random.randint(0, 641, 50)
+    ax[2].scatter(theta[inds], Ylip[i][inds], c=viridis[i], alpha=0.9)
 plt.show()
 
-
-plt.plot(Ylip_lout[0])
-# plt.plot(Ylip[0])
-plt.show()
+# ####################### Partial observations toy data ##############################################################
+# Load dataset
+Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
 
 # ####################### Functional outliers ##################################################################
 Xtrain, Ytrain, Xtest, Ytest, gpdict = load_gp_dataset(seeds_coefs_train[0], seeds_coefs_test[0], return_outdict=True)
