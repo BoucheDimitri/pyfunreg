@@ -1,6 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
 import torch
+from sklearn.decomposition import DictionaryLearning, PCA
+from scipy.interpolate import interp1d
 
 from kernel import RandomFourierFeatures
 
@@ -29,7 +31,7 @@ class Basis(ABC):
 
         Parameters
         ----------
-        thetas : array-like, shape = [n_locations, ]
+        thetas: array-like, shape = [n_locations, ]
             Locations of evaluation of the functions
 
         Returns
@@ -40,7 +42,7 @@ class Basis(ABC):
         pass
 
     @abstractmethod
-    def get_Phi_adj_Phi(self):
+    def get_Phi_adj_Phi(self, thetas=None):
         pass
 
 
@@ -50,12 +52,14 @@ class FourierBasis(Basis):
 
     Parameters
     ----------
+    n_basis: int
+        Number of basis functions
+    domain: array-like, shape = [2,]
+        Bounds of the interval of definition
     lower_freq: int
         Minimum frequency to consider
     upper_freq: int
         Maximum frequency to consider
-    domain: array-like, shape = [input_dim, 2]
-        Bounds for the domain of the basis function
     """
 
     def __init__(self, lower_freq, upper_freq, domain):
@@ -92,12 +96,25 @@ class FourierBasis(Basis):
             count += 1
         return mat
 
-    def get_Phi_adj_Phi(self):
+    def get_Phi_adj_Phi(self, thetas=None):
         return np.eye(self.n_basis)
 
 
 class RandomFourierBasis(Basis):
+    """
+    Random Fourier features for a Gaussian kernel
 
+    Parameters
+    ----------
+    n_basis: int
+        Number of basis functions
+    domain: array-like, shape = [2,]
+        Bounds of the interval of definition
+    gamma: float
+        Bandwidth parameter of the Gaussian kernel
+    seed: int
+        Seed to use for the draws of random frequencies
+    """
     def __init__(self, gamma, seed, n_basis, domain):
         self.rffs = RandomFourierFeatures(gamma, n_basis, seed)
         self.rffs.fit(np.zeros((1, 1)))
@@ -108,15 +125,74 @@ class RandomFourierBasis(Basis):
     
     def compute_Phi_adj_Phi(self, thetas):
         Phi = self.compute_Phi(thetas)
-        self.gram_matrix = (1 / len(thetas)) * Phi.T @ Phi
+        self.gram_matrix = ((self.domain[1] - self.domain[1]) / len(thetas)) * Phi.T @ Phi
 
-    def get_Phi_adj_Phi(self):
+    def get_Phi_adj_Phi(self, thetas=None):
+        if self.gram_matrix is None:
+            self.compute_Phi_adj_Phi(thetas)
         return self.gram_matrix
 
 
+class FunctionalPCA(Basis):
+    """
+    Functional PCA from discrete PCA with linear interpolation
+
+    Parameters
+    ----------
+    n_basis: int
+        Number of basis functions
+    domain: array-like, shape = [2,]
+        Bounds of the interval of definition
+    """
+    def __init__(self, n_basis, domain):
+        super().__init__(n_basis, domain)
+        self.pca = PCA(self.n_basis)
+        self.thetas_fit = None
+    
+    def fit(self, Y, thetas):
+        self.pca.fit(Y)
+        self.thetas_fit = thetas
+    
+    def compute_Phi(self, thetas):
+        interp_func = interp1d(self.thetas_fit, self.pca.components_)
+        return np.sqrt(len(thetas)) * interp_func(thetas).T
+    
+    def get_Phi_adj_Phi(self, thetas=None):
+        return np.eye(self.n_basis)
 
 
+class FunctionalDL(Basis):
+    """
+    Functional dictionary learning from discrete dictionary learning with linear interpolation
 
+    Parameters
+    ----------
+    n_basis: int
+        Number of basis functions
+    domain: array-like, shape = [2,]
+        Bounds of the interval of definition
+    """
+    def __init__(self, n_basis, domain, alpha=1e-6, tol=1e-5, max_iter=1000, random_state=342):
+        super().__init__(n_basis, domain)
+        self.dl = DictionaryLearning(n_components=self.n_basis, alpha=alpha, tol=tol, max_iter=max_iter, fit_algorithm="cd", random_state=random_state)
+        self.thetas_fit = None
+    
+    def fit(self, Y, thetas):
+        self.dl.fit(Y)
+        self.thetas_fit = thetas
+    
+    def compute_Phi(self, thetas):
+        interp_func = interp1d(self.thetas_fit, self.dl.components_)
+        return np.sqrt(len(thetas)) * interp_func(thetas).T
+    
+    def compute_Phi_adj_Phi(self, thetas):
+        Phi = self.compute_Phi(thetas)
+        self.gram_matrix = ((self.domain[1] - self.domain[1]) / len(thetas)) * Phi.T @ Phi
+
+    def get_Phi_adj_Phi(self, thetas=None):
+        if self.gram_matrix is None:
+            self.compute_Phi_adj_Phi(thetas)
+        return self.gram_matrix
 
 
 

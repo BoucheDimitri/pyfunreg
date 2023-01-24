@@ -1,1 +1,1 @@
-from .dictionaries import FourierBasis, RandomFourierBasis
+from .dictionaries import FourierBasis, RandomFourierBasis, FunctionalPCA, FunctionalDL
