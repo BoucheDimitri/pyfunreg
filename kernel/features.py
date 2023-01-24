@@ -58,14 +58,14 @@ class RandomFourierFeatures:
         self.input_dim = None
         self.seed = seed
         self.w, self.b = None, None
-        self.fit = False
+        self.fitted = False
     
     def fit(self, X, K=None):
         self.input_dim = X.shape[1]
         np.random.seed(self.seed)
         self.w = torch.from_numpy(np.random.normal(0, 1, (self.input_dim, self.n_features)))
         self.b = torch.from_numpy(np.random.uniform(0, 2 * np.pi, (1, self.n_features)))
-        self.fit = True
+        self.fitted = True
     
     def __call__(self, X, K=None):
         return np.sqrt(2 / self.n_features) * torch.cos(np.sqrt(2 * self.gamma) * X @ self.w + self.b)

@@ -1,1 +1,1 @@
-from .dictionaries import FourierBasis
+from .dictionaries import FourierBasis, RandomFourierBasis

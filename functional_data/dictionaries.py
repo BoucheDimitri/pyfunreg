@@ -1,10 +1,52 @@
 import numpy as np
+from abc import ABC, abstractmethod
+import torch
+
+from kernel import RandomFourierFeatures
 
 
-
-class FourierBasis:
+class Basis(ABC):
     """
     Abstract class for set of basis functions
+
+    Parameters
+    ----------
+    n_basis: int
+        Number of basis functions
+    domain: array-like, shape = [2,]
+        Bounds of the interval of definition
+    """
+    def __init__(self, n_basis, domain):
+        self.n_basis = n_basis
+        self.gram_matrix = None
+        self.domain = np.array(domain)
+        super().__init__()
+
+    @abstractmethod
+    def compute_Phi(self, thetas):
+        """
+        Evaluate the set of basis functions on a given set of values
+
+        Parameters
+        ----------
+        thetas : array-like, shape = [n_locations, ]
+            Locations of evaluation of the functions
+
+        Returns
+        -------
+        array-like, shape=[n_locations, n_basis]
+            Matrix of evaluations at the locations thetas for the basis functions
+        """
+        pass
+
+    @abstractmethod
+    def get_Phi_adj_Phi(self):
+        pass
+
+
+class FourierBasis(Basis):
+    """
+    Fourier basis
 
     Parameters
     ----------
@@ -14,56 +56,67 @@ class FourierBasis:
         Maximum frequency to consider
     domain: array-like, shape = [input_dim, 2]
         Bounds for the domain of the basis function
-
-    Attributes
-    ----------
-    n_basis: int
-        Number of basis functions
-    input_dim: int
-        The number of dimensions of the input space
-    domain: array-like, shape = [input_dim, 2]
-        Bounds for the domain of the basis function
-    freqs: tuple, len = 2
-        Frequencies included in the basis
     """
 
     def __init__(self, lower_freq, upper_freq, domain):
         self.add_constant = lower_freq == 0
         self.cos_freqs = np.array(np.arange(lower_freq + int(self.add_constant), upper_freq))
         self.sin_freqs = np.array(np.arange(lower_freq + int(self.add_constant), upper_freq))
-        self.n_basis = len(self.cos_freqs) + len(self.sin_freqs) + int(self.add_constant)
-        self.domain = domain
+        n_basis = len(self.cos_freqs) + len(self.sin_freqs) + int(self.add_constant)
+        super().__init__(n_basis, domain)
 
     @staticmethod
-    def cos_atom(n, a, b, x):
-        return (1 / np.sqrt((b - a) / 2)) * np.cos((2 * np.pi * n * (x - a)) / (b - a))
+    def cos_atom(n, a, b, theta):
+        return (1 / np.sqrt((b - a) / 2)) * np.cos((2 * np.pi * n * (theta - a)) / (b - a))
 
     @staticmethod
-    def sin_atom(n, a, b, x):
-        return (1 / np.sqrt((b - a) / 2)) * np.sin((2 * np.pi * n * (x - a)) / (b - a))
+    def sin_atom(n, a, b, theta):
+        return (1 / np.sqrt((b - a) / 2)) * np.sin((2 * np.pi * n * (theta - a)) / (b - a))
 
     @staticmethod
-    def constant_atom(a, b, x):
-        return 1 / np.sqrt(b - a) * np.ones(x.shape)
+    def constant_atom(a, b, theta):
+        return 1 / np.sqrt(b - a) * np.ones(theta.shape)
 
-    def compute_matrix(self, X):
-        n = X.shape[0]
-        mat = np.zeros((n, self.n_basis))
+    def compute_Phi(self, thetas):
+        mat = np.zeros((thetas.shape[0], self.n_basis))
         a, b = self.domain[0], self.domain[1]
         count = 0
         if self.add_constant:
-            mat[:, 0] = np.array([FourierBasis.constant_atom(a, b, np.squeeze(X))])
+            mat[:, 0] = np.array([FourierBasis.constant_atom(a, b, thetas)])
             count += 1
         for freq in self.cos_freqs:
-            mat[:, count] = np.array([FourierBasis.cos_atom(freq, a, b, np.squeeze(X))])
+            mat[:, count] = np.array([FourierBasis.cos_atom(freq, a, b, thetas)])
             count += 1
         for freq in self.sin_freqs:
-            mat[:, count] = np.array([FourierBasis.sin_atom(freq, a, b, np.squeeze(X))])
+            mat[:, count] = np.array([FourierBasis.sin_atom(freq, a, b, thetas)])
             count += 1
         return mat
 
-    def get_gram_matrix(self):
+    def get_Phi_adj_Phi(self):
         return np.eye(self.n_basis)
+
+
+class RandomFourierBasis(Basis):
+
+    def __init__(self, gamma, seed, n_basis, domain):
+        self.rffs = RandomFourierFeatures(gamma, n_basis, seed)
+        self.rffs.fit(np.zeros((1, 1)))
+        super().__init__(n_basis, domain)
+    
+    def compute_Phi(self, thetas):
+        return self.rffs(torch.from_numpy(thetas).unsqueeze(1)).numpy()
+    
+    def compute_Phi_adj_Phi(self, thetas):
+        Phi = self.compute_Phi(thetas)
+        self.gram_matrix = (1 / len(thetas)) * Phi.T @ Phi
+
+    def get_Phi_adj_Phi(self):
+        return self.gram_matrix
+
+
+
+
+
 
 
 
